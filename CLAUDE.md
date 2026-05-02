@@ -66,9 +66,42 @@ src/
   styles/        # Fonts (Cinzel display + Cormorant Garamond body)
 ```
 
-## Contribution Rules
+## Contribution Workflow
 
-- **Branch strategy:** Work on feature branches, open PRs against `main`
+Work happens on your personal fork. Changes are previewed on `neo.skymasons.xyz` before going to production.
+
+### Step 1 — Set up your fork as a remote (first time only)
+
+On mainframe, the repo is cloned from `grandmasterskymason/sanctum`. Add your fork as a second remote so you can push to it:
+
+```bash
+git remote add fork https://github.com/<your-username>/sanctum.git
+```
+
+### Step 2 — Work on a feature branch
+
+```bash
+git checkout -b feature/your-feature
+# make changes
+git add .
+git commit -m "Description of change"
+git push fork feature/your-feature
+```
+
+### Step 3 — Open a PR to `neo`
+
+On GitHub, open a PR from `your-fork:feature/your-feature` → `grandmasterskymason/sanctum:neo`. You can merge this yourself once you're happy with it. Merging triggers an automatic deploy to `neo.skymasons.xyz`.
+
+### Step 4 — Preview on neo
+
+Check your changes at `neo.skymasons.xyz`. Iterate by pushing more commits to your branch and merging to `neo`. The site redeploys on every merge.
+
+### Step 5 — Promote to production
+
+When the feature is ready, open a PR from `neo` → `main`. Grand Master reviews and merges. Production (`sanctum.skymasons.xyz`) is updated manually after that merge.
+
+## Code Rules
+
 - **Don't break SSO:** All authenticated routes depend on Authentik forward auth headers
 - **Don't hardcode Nextcloud URLs:** Use the proxy routes in `src/lib/api.ts` (`fetchFromNextcloud`, `postToNextcloud`)
 - **Guild/order mapping:** Keep "guilds" in frontend, "orders" stays in backend API responses
