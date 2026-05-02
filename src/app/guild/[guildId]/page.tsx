@@ -1,5 +1,5 @@
 import { ChamberHeader } from "@/components/shared"
-import { FocusCard, EntryGrid } from "@/components/threshold"
+import { FocusCard, EntryGrid, GuildRenameEditor } from "@/components/threshold"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
 import { determineFocus } from "@/lib/focus"
@@ -52,12 +52,17 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
         subtitle={guild.description}
         centered
         meta={
-          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-gray">
-            <span>Seeded by <span className="text-guild">{guild.seederUid}</span></span>
-            <span className="text-gray-dark">·</span>
-            <span>{guild.memberCount} members</span>
-            <span className="text-gray-dark">·</span>
-            <span>{formatAdmission(guild.admission)}</span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-gray">
+              <span>Seeded by <span className="text-guild">{guild.seederUid}</span></span>
+              <span className="text-gray-dark">·</span>
+              <span>{guild.memberCount} members</span>
+              <span className="text-gray-dark">·</span>
+              <span>{formatAdmission(guild.admission)}</span>
+            </div>
+            {user?.username === guild.seederUid && (
+              <GuildRenameEditor guildId={guildId} name={guild.name} />
+            )}
           </div>
         }
       />

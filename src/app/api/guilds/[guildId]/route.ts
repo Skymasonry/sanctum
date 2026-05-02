@@ -53,6 +53,24 @@ function ncRequest(method: string, path: string, authHeaders: Record<string, str
   })
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ guildId: string }> }
+) {
+  const auth = await getAuthHeaders()
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { guildId } = await params
+
+  try {
+    const body = await request.json()
+    const data = await ncRequest("PATCH", `/apps/skymasonsnav/api/orders/${guildId}`, auth, JSON.stringify(body))
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("Failed to update guild:", error)
+    return NextResponse.json({ error: "Update failed" }, { status: 500 })
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
