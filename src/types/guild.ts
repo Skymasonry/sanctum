@@ -12,6 +12,8 @@ export interface Guild {
   category?: string
   createdAt: string
   circleId: string
+  patternIntegrity?: string
+  evolutionaryPurpose?: string
   applicationForm?: {
     agreements: Array<{ id: number; text: string }>
   }
