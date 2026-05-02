@@ -113,6 +113,12 @@ interface SidebarItemProps {
   isActive: boolean
 }
 
+const QUICK_LINKS = [
+  { label: "The Pulse", path: "pulse" },
+  { label: "The Chamber", path: "" },
+  { label: "Rites", path: "rites" },
+]
+
 function SidebarItem({ guild, isActive }: SidebarItemProps) {
   return (
     <motion.div
@@ -133,7 +139,6 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
         }}
         title={guild.name}
       >
-        {/* Active indicator pip */}
         {isActive && (
           <motion.div
             layoutId="active-pip"
@@ -145,9 +150,25 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
         <span style={{ color: guild.color }}>{guild.icon}</span>
       </Link>
 
-      {/* Tooltip */}
-      <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-gray-dark bg-black px-3 py-1.5 text-sm text-white opacity-0 transition-all duration-200 group-hover:ml-3 group-hover:opacity-100">
-        {guild.name}
+      {/* Hover submenu */}
+      <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-x-1 -translate-y-1/2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
+        <div className="min-w-[160px] overflow-hidden rounded-lg border border-gray-dark bg-black shadow-xl">
+          <div
+            className="border-b border-gray-dark px-3 py-2 text-xs font-semibold uppercase tracking-widest"
+            style={{ color: guild.color }}
+          >
+            {guild.name}
+          </div>
+          {QUICK_LINKS.map(({ label, path }) => (
+            <Link
+              key={label}
+              href={`/guild/${guild.id}${path ? `/${path}` : ""}`}
+              className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </motion.div>
   )
