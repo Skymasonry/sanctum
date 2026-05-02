@@ -8,21 +8,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Fix cache permissions
-        run: |
-          echo "${{ secrets.NEO_DEPLOY_KEY }}" > /tmp/neo_deploy_key
-          chmod 600 /tmp/neo_deploy_key
-          ssh -i /tmp/neo_deploy_key \
-            -o StrictHostKeyChecking=no \
-            grandmaster@${{ secrets.NEO_HOST }} \
-            "sudo chown -R grandmaster:grandmaster ~/.next-dev/ 2>/dev/null || true"
-          rm /tmp/neo_deploy_key
-
       - name: Deploy to neo.skymasons.xyz
         run: |
           echo "${{ secrets.NEO_DEPLOY_KEY }}" > /tmp/neo_deploy_key
           chmod 600 /tmp/neo_deploy_key
           ssh -i /tmp/neo_deploy_key \
             -o StrictHostKeyChecking=no \
-            grandmaster@${{ secrets.NEO_HOST }}
+            grandmaster@${{ secrets.NEO_HOST }} || true
           rm /tmp/neo_deploy_key
