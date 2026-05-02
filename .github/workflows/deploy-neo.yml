@@ -2,7 +2,7 @@ name: Deploy Neo
 
 on:
   push:
-    branches: [main]
+    branches: [neo]
 
 jobs:
   deploy:
