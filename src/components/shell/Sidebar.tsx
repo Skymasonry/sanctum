@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -120,12 +120,26 @@ const QUICK_LINKS = [
 ]
 
 function SidebarItem({ guild, isActive }: SidebarItemProps) {
+  const [open, setOpen] = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleMouseEnter() {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    setOpen(true)
+  }
+
+  function handleMouseLeave() {
+    closeTimer.current = setTimeout(() => setOpen(false), 200)
+  }
+
   return (
     <motion.div
       layout
       layoutId={guild.id}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="group relative"
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Link
         href={`/guild/${guild.id}`}
@@ -151,7 +165,12 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
       </Link>
 
       {/* Hover submenu */}
-      <div className="pointer-events-none absolute left-full top-1/2 z-50 pl-2 -translate-x-1 -translate-y-1/2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
+      <div
+        className={cn(
+          "absolute left-full top-1/2 z-50 pl-2 -translate-y-1/2 transition-all duration-150",
+          open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
+        )}
+      >
         <div className="min-w-[160px] overflow-hidden rounded-lg border border-gray-dark bg-black shadow-xl">
           <div
             className="border-b border-gray-dark px-3 py-2 text-xs font-semibold uppercase tracking-widest"
