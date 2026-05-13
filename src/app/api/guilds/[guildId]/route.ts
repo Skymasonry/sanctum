@@ -64,7 +64,7 @@ export async function POST(
   try {
     const url = new URL(request.url)
     const action = url.searchParams.get("action")
-    
+
     if (!action) {
       return NextResponse.json({ error: "Action required" }, { status: 400 })
     }
@@ -72,18 +72,27 @@ export async function POST(
     let path = ""
     let body: string | undefined
 
-    switch (action) {
-      case "join":
-        path = `/apps/skymasonsnav/api/orders/${guildId}/join`
-        break
-      case "apply":
-        path = `/apps/skymasonsnav/api/orders/${guildId}/apply`
-        break
-      case "leave":
-        path = `/apps/skymasonsnav/api/orders/${guildId}/leave`
-        break
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    if (action === "approve" || action === "reject") {
+      const requestBody = await request.json().catch(() => ({}))
+      const memberId = requestBody.memberId
+      if (!memberId) {
+        return NextResponse.json({ error: "memberId required" }, { status: 400 })
+      }
+      path = `/apps/skymasonsnav/api/orders/${guildId}/members/${memberId}/${action}`
+    } else {
+      switch (action) {
+        case "join":
+          path = `/apps/skymasonsnav/api/orders/${guildId}/join`
+          break
+        case "apply":
+          path = `/apps/skymasonsnav/api/orders/${guildId}/apply`
+          break
+        case "leave":
+          path = `/apps/skymasonsnav/api/orders/${guildId}/leave`
+          break
+        default:
+          return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+      }
     }
 
     const data = await ncRequest("POST", path, auth, body)

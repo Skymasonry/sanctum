@@ -1,8 +1,10 @@
 import { Users, UserPlus, ExternalLink } from "lucide-react"
 import { ChamberHeader, Card, CardTitle } from "@/components/shared"
 import { getGuild } from "@/lib/guilds"
+import { getUser } from "@/lib/auth"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { ApplicationsPanel } from "./applications-panel"
 
 interface BrotherhoodPageProps {
   params: Promise<{ guildId: string }>
@@ -32,13 +34,15 @@ function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolea
 
 export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) {
   const { guildId } = await params
-  const guild = await getGuild(guildId)
+  const [guild, user] = await Promise.all([getGuild(guildId), getUser()])
 
   if (!guild) {
     notFound()
   }
 
-  // Sort members: seeder first, then alphabetically
+  const isSeeder = user?.username === guild.seederUid
+  const applications = guild.applications ?? []
+
   const sortedMembers = [...guild.members].sort((a, b) => {
     if (a === guild.seederUid) return -1
     if (b === guild.seederUid) return 1
@@ -74,13 +78,8 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
       </div>
 
       <div className="flex-1">
-        {guild.pending.length > 0 && (
-          <div className="mb-6 rounded-lg border border-guild/30 bg-guild/5 p-4">
-            <h3 className="font-medium text-guild">Pending Applications</h3>
-            <p className="mt-1 text-sm text-gray">
-              {guild.pending.length} {guild.pending.length === 1 ? "seeker" : "seekers"} awaiting approval
-            </p>
-          </div>
+        {isSeeder && applications.length > 0 && (
+          <ApplicationsPanel guildId={guildId} applications={applications} />
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
