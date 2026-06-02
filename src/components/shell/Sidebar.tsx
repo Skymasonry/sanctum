@@ -121,19 +121,31 @@ const QUICK_LINKS = [
 
 function SidebarItem({ guild, isActive }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
+  const [flipUp, setFlipUp] = useState(false)
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const itemRef = useRef<HTMLDivElement>(null)
 
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
-    setOpen(true)
+    openTimer.current = setTimeout(() => {
+      // Check if popup would clip at bottom of viewport
+      if (itemRef.current) {
+        const rect = itemRef.current.getBoundingClientRect()
+        setFlipUp(rect.bottom + 80 > window.innerHeight)
+      }
+      setOpen(true)
+    }, 150)
   }
 
   function handleMouseLeave() {
+    if (openTimer.current) clearTimeout(openTimer.current)
     closeTimer.current = setTimeout(() => setOpen(false), 200)
   }
 
   return (
     <motion.div
+      ref={itemRef}
       layout
       layoutId={guild.id}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
@@ -167,7 +179,8 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
       {/* Hover submenu */}
       <div
         className={cn(
-          "absolute left-full top-1/2 z-50 pl-2 -translate-y-1/2 transition-all duration-150",
+          "absolute left-full z-50 pl-2 transition-all duration-150",
+          flipUp ? "bottom-0" : "top-1/2 -translate-y-1/2",
           open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
         )}
       >
