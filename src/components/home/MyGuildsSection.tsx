@@ -11,9 +11,10 @@ interface MyGuildsSectionProps {
   guilds: Guild[]
   username: string
   search: string
+  unreadByGuildId?: Record<string, number>
 }
 
-export function MyGuildsSection({ guilds, username, search }: MyGuildsSectionProps) {
+export function MyGuildsSection({ guilds, username, search, unreadByGuildId = {} }: MyGuildsSectionProps) {
   const [pinnedIds, setPinnedIds] = useLocalStorage<string[]>("sanctum-pinned-guilds", [])
   const [collapsedCategories, setCollapsedCategories] = useLocalStorage<string[]>("sanctum-collapsed-categories", [])
 
@@ -94,6 +95,7 @@ export function MyGuildsSection({ guilds, username, search }: MyGuildsSectionPro
                 isMember={true}
                 isPinned={true}
                 onTogglePin={togglePin}
+                unreadCount={unreadByGuildId[guild.id] ?? 0}
               />
             ))}
           </div>
@@ -118,6 +120,7 @@ export function MyGuildsSection({ guilds, username, search }: MyGuildsSectionPro
                 isMember={true}
                 isPinned={pinnedIds.includes(guild.id)}
                 onTogglePin={togglePin}
+                unreadCount={unreadByGuildId[guild.id] ?? 0}
               />
             ))}
           </div>

@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
-  Calendar, Shield, Clock, Loader2, Search, Sparkles
+  Calendar, Shield, Loader2, Search, Sparkles, ChevronDown, ChevronUp, ChevronRight
 } from "lucide-react"
 import type { Guild } from "@/types/guild"
 import type { User } from "@/lib/auth"
+import type { TalkRoom } from "@/lib/talk"
 import { MyGuildsSection } from "./MyGuildsSection"
 import { CreateGuildModal } from "./CreateGuildModal"
 import { DiscoverSection } from "./DiscoverSection"
@@ -40,6 +41,8 @@ interface HomePageProps {
 export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePageProps) {
   const [events, setEvents] = useState<UpcomingEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
+  const [showAllEvents, setShowAllEvents] = useState(false)
+  const [unreadByGuildId, setUnreadByGuildId] = useState<Record<string, number>>({})
   const [showCreateGuild, setShowCreateGuild] = useState(false)
   const [search, setSearch] = useState("")
   const [tab, setTab] = useState<"my" | "discover">("my")
@@ -86,6 +89,31 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
     }
   }, [guildCalendars])
 
+  useEffect(() => {
+    const tokenToGuildId: Record<string, string> = {}
+    for (const guild of userGuilds) {
+      if (guild.resources.talkRoom) {
+        tokenToGuildId[guild.resources.talkRoom] = guild.id
+      }
+    }
+
+    if (Object.keys(tokenToGuildId).length === 0) return
+
+    fetch("/api/talk/rooms")
+      .then((r) => r.ok ? r.json() : [])
+      .then((rooms: TalkRoom[]) => {
+        const map: Record<string, number> = {}
+        for (const room of rooms) {
+          const guildId = tokenToGuildId[room.token]
+          if (guildId && room.unreadMessages > 0) {
+            map[guildId] = room.unreadMessages
+          }
+        }
+        setUnreadByGuildId(map)
+      })
+      .catch(() => {})
+  }, [userGuilds])
+
   const otherGuilds = allGuilds.filter(
     (g) => !g.members.some((m) => m.toLowerCase() === username) && g.admission !== "mandatory"
   )
@@ -131,10 +159,27 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
               <p className="text-sm italic text-gray">No rites foretold in the coming days</p>
             </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-              {events.slice(0, 8).map((event) => (
-                <EventCard key={`${event.guildId}-${event.uid}`} event={event} />
-              ))}
+            <div className="space-y-3">
+              <NextEventCard event={events[0]} />
+              {events.length > 1 && (
+                <button
+                  onClick={() => setShowAllEvents((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs text-gray transition-colors hover:text-white"
+                >
+                  {showAllEvents ? (
+                    <><ChevronUp className="h-3.5 w-3.5" /> Hide</>
+                  ) : (
+                    <><ChevronDown className="h-3.5 w-3.5" /> {events.length - 1} more upcoming</>
+                  )}
+                </button>
+              )}
+              {showAllEvents && (
+                <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                  {events.slice(1).map((event) => (
+                    <EventCard key={`${event.guildId}-${event.uid}`} event={event} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -208,7 +253,7 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
 
           {/* Tab content */}
           {tab === "my" ? (
-            <MyGuildsSection guilds={userGuilds} username={username} search={search} />
+            <MyGuildsSection guilds={userGuilds} username={username} search={search} unreadByGuildId={unreadByGuildId} />
           ) : (
             <DiscoverSection guilds={otherGuilds} username={username} search={search} />
           )}
@@ -243,6 +288,71 @@ function useCountdown(target: Date) {
   if (days > 0) return `${days}d ${remHours}h`
   if (hours > 0) return `${hours}h ${remMinutes}m`
   return `${remMinutes}m`
+}
+
+function NextEventCard({ event }: { event: UpcomingEvent }) {
+  const date = new Date(event.start)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const isTomorrow = date.toDateString() === tomorrow.toDateString()
+
+  const dayLabel = isToday
+    ? "Today"
+    : isTomorrow
+    ? "Tomorrow"
+    : date.toLocaleDateString("en-AU", { weekday: "short" })
+
+  const dateNum = date.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+  const timeLabel = date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })
+  const guildColor = event.guildColor || "#c9a227"
+
+  return (
+    <Link
+      href={`/guild/${event.guildId}/rites`}
+      className="group flex items-center gap-4 rounded-lg border border-gray-dark bg-black-light/50 px-5 py-4 transition-all hover:border-gray hover:bg-black-light"
+    >
+      {/* Date column */}
+      <div className="flex min-w-[52px] flex-col items-center text-center">
+        <span className={`text-[10px] font-medium uppercase tracking-widest ${isToday ? "text-gold" : "text-gray"}`}>
+          {dayLabel}
+        </span>
+        <span className={`font-display text-xl font-medium leading-tight ${isToday ? "text-gold" : "text-white"}`}>
+          {date.getDate()}
+        </span>
+        <span className="text-[10px] text-gray">{dateNum.split(" ")[1]}</span>
+      </div>
+
+      {/* Divider */}
+      <div className="h-10 w-px shrink-0 bg-gray-dark" />
+
+      {/* Event info */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-white group-hover:text-gold">
+          {event.title}
+        </p>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="text-[11px] text-gray">{timeLabel}</span>
+          <span className="text-[11px] text-gray">·</span>
+          <span className="text-[11px] font-medium" style={{ color: guildColor }}>
+            {event.guildName}
+          </span>
+        </div>
+      </div>
+
+      {/* Guild icon */}
+      <div className="shrink-0 text-2xl" style={{ color: guildColor }}>
+        {event.guildIcon?.startsWith("data:") ? (
+          <img src={event.guildIcon} alt="" className="h-7 w-7 object-contain" />
+        ) : (
+          event.guildIcon || "⬡"
+        )}
+      </div>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-gray transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  )
 }
 
 function EventCard({ event }: { event: UpcomingEvent }) {

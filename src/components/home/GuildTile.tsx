@@ -11,9 +11,10 @@ interface GuildTileProps {
   isMember: boolean
   isPinned?: boolean
   onTogglePin?: (guildId: string) => void
+  unreadCount?: number
 }
 
-export function GuildTile({ guild, username, isMember, isPinned, onTogglePin }: GuildTileProps) {
+export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, unreadCount = 0 }: GuildTileProps) {
   const [acting, setActing] = useState(false)
   const [actionResult, setActionResult] = useState<string | null>(null)
   const isPending = guild.pending?.some((p) => p.toLowerCase() === username)
@@ -35,6 +36,13 @@ export function GuildTile({ guild, username, isMember, isPinned, onTogglePin }: 
 
   const cardContent = (
     <div className="flex flex-col items-center px-3 py-5">
+      {/* Unread badge */}
+      {isMember && unreadCount > 0 && (
+        <span className="absolute left-1.5 top-1.5 z-20 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+
       {/* Pin star */}
       {onTogglePin && (
         <button
