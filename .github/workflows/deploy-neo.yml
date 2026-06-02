@@ -15,7 +15,7 @@ jobs:
           ssh -i /tmp/neo_deploy_key \
             -o StrictHostKeyChecking=no \
             grandmaster@${{ secrets.NEO_HOST }} \
-            "docker exec sanctum-neo-dev-1 rm -rf /app/.next/cache 2>/dev/null || true; find /home/grandmaster -path '*/.next*/cache/images' -type d -exec rm -rf {} + 2>/dev/null || true"
+            "docker exec sanctum-neo-dev-1 sh -c 'chmod -R 777 /app/.next/cache 2>/dev/null; rm -rf /app/.next/cache 2>/dev/null' || true"
           rm /tmp/neo_deploy_key
 
       - name: Deploy to neo.skymasons.xyz
