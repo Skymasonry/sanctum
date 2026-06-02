@@ -100,7 +100,7 @@ When the feature is ready, open a PR from `neo` → `main`. Grand Master reviews
 
 ## Hard Limits
 
-- **Never run `gh pr merge`** — PRs are merged by contributors (to `neo`) or Grand Master (to `main`) in the GitHub UI
+- **Never merge to `main`** — only Grand Master merges `neo → main` via GitHub UI; you may run `gh pr merge` for PRs targeting `neo`
 - **Never commit directly to `neo` or `main`** — always via a branch first
 - **Never edit, push to, or close another contributor's branch or PR** — you may read them for context but must not modify them
 
