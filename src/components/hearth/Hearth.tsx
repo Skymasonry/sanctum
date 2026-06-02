@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { MessageCircle, Calendar, ChevronRight, Flame } from "lucide-react"
-import { motion } from "framer-motion"
+import { MessageCircle, Calendar, ChevronRight, Flame, Video, ChevronDown } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import type { User } from "@/lib/auth"
 import type { Guild } from "@/types/guild"
@@ -31,7 +31,6 @@ interface HearthProps {
   guildCalendars: GuildCalendarRef[]
 }
 
-// Computed once at module load — used for relative time comparisons
 const NOW_SECONDS = Math.floor(new Date().getTime() / 1000)
 
 function timeAgo(unixSeconds: number): string {
@@ -43,7 +42,7 @@ function timeAgo(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleDateString("en-AU", { day: "numeric", month: "short" })
 }
 
-function formatEventDate(start: string): { dayLabel: string; timeLabel: string; isToday: boolean; isSoon: boolean } {
+function formatEventDate(start: string): { dayLabel: string; timeLabel: string; isToday: boolean; isTomorrow: boolean } {
   const date = new Date(start)
   const now = new Date()
   const tomorrow = new Date(now)
@@ -51,13 +50,11 @@ function formatEventDate(start: string): { dayLabel: string; timeLabel: string; 
 
   const isToday = date.toDateString() === now.toDateString()
   const isTomorrow = date.toDateString() === tomorrow.toDateString()
-  const diffDays = Math.ceil((date.getTime() - now.getTime()) / 86400000)
-  const isSoon = diffDays <= 7
 
-  const dayLabel = isToday ? "Today" : isTomorrow ? "Tomorrow" : date.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" })
+  const dayLabel = isToday ? "Today" : isTomorrow ? "Tomorrow" : date.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })
   const timeLabel = date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })
 
-  return { dayLabel, timeLabel, isToday, isSoon }
+  return { dayLabel, timeLabel, isToday, isTomorrow }
 }
 
 const stagger = {
@@ -66,7 +63,6 @@ const stagger = {
 }
 
 export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalendars }: HearthProps) {
-  // null = still loading, [] = loaded with no events
   const [events, setEvents] = useState<UpcomingEvent[] | null>(guildCalendars.length === 0 ? [] : null)
   const [showCreateGuild, setShowCreateGuild] = useState(false)
   const [guildTab, setGuildTab] = useState<"my" | "discover">("my")
@@ -110,18 +106,14 @@ export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalenda
   }, [guildCalendars])
 
   const nowSeconds = NOW_SECONDS
-  const nextEvent = events?.[0] ?? null
-  const activePulse = pulseEntries.filter((p) => {
-    const hoursSince = (nowSeconds - p.lastActivity) / 3600
-    return hoursSince < 168 // active in last week
-  })
+  const activePulse = pulseEntries.filter((p) => (nowSeconds - p.lastActivity) / 3600 < 168)
 
   return (
     <div className="atmosphere flex h-full flex-col overflow-y-auto">
 
       {/* Welcome */}
       <div className="relative border-b border-gray-dark/50 px-6 pb-7 pt-8 lg:px-8">
-        <div className="relative z-10">
+        <div className="mx-auto max-w-3xl">
           <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-gray">
             Per aspera ad astra
           </p>
@@ -135,22 +127,32 @@ export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalenda
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-gold/[0.03] to-transparent" />
       </div>
 
-      <div className="flex-1 space-y-0 divide-y divide-gray-dark/40 px-6 lg:px-8">
+      {/* Main content — constrained width */}
+      <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-8 lg:px-8">
 
-        {/* Next Gathering */}
-        <section className="py-8">
-          <SectionLabel icon={<Calendar className="h-4 w-4" />} title="Next Gathering" />
-          {events === null ? (
-            <p className="py-4 text-sm italic text-gray">Reading the stars…</p>
-          ) : nextEvent ? (
-            <NextGathering event={nextEvent} remaining={events.length - 1} />
-          ) : (
-            <QuietState message="No gatherings foretold in the coming days." />
-          )}
-        </section>
+        {/* Top row: Next Gathering + Live Chambers */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+          {/* Next Gathering — wider */}
+          <div className="sm:col-span-3">
+            <SectionLabel icon={<Calendar className="h-4 w-4" />} title="Next Gathering" />
+            {events === null ? (
+              <p className="py-4 text-sm italic text-gray">Reading the stars…</p>
+            ) : events.length > 0 ? (
+              <NextGathering event={events[0]} moreEvents={events.slice(1)} />
+            ) : (
+              <QuietState message="No gatherings foretold in the coming days." />
+            )}
+          </div>
 
-        {/* The Pulse */}
-        <section className="py-8">
+          {/* Live Chambers — narrower */}
+          <div className="sm:col-span-2">
+            <SectionLabel icon={<Video className="h-4 w-4" />} title="Chambers" />
+            <LiveChambers guilds={userGuilds} />
+          </div>
+        </div>
+
+        {/* The Chat */}
+        <div>
           <SectionLabel icon={<Flame className="h-4 w-4" />} title="The Chat" subtitle="Where conversation is alive" />
           {activePulse.length === 0 ? (
             <QuietState message="The hearth is quiet this morning." />
@@ -159,29 +161,17 @@ export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalenda
               variants={stagger.container}
               initial="hidden"
               animate="show"
-              className="space-y-2"
+              className="space-y-1"
             >
               {activePulse.map((entry) => (
                 <PulseRow key={entry.guildId} entry={entry} nowSeconds={nowSeconds} />
               ))}
             </motion.div>
           )}
-        </section>
-
-        {/* Upcoming — rest of events */}
-        {events && events.length > 1 && (
-          <section className="py-8">
-            <SectionLabel icon={<Calendar className="h-4 w-4" />} title="Coming Up" />
-            <div className="space-y-2">
-              {events!.slice(1, 5).map((event) => (
-                <UpcomingEventRow key={`${event.guildId}-${event.uid}`} event={event} />
-              ))}
-            </div>
-          </section>
-        )}
+        </div>
 
         {/* Guilds */}
-        <section className="py-8">
+        <div>
           <div className="mb-5 flex items-center justify-between">
             <SectionLabel title="Guilds" />
             <button
@@ -213,7 +203,7 @@ export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalenda
           ) : (
             <DiscoverSection guilds={otherGuilds} username={username} search="" />
           )}
-        </section>
+        </div>
 
       </div>
 
@@ -233,7 +223,7 @@ function greeting(): string {
 
 function SectionLabel({ icon, title, subtitle }: { icon?: React.ReactNode; title: string; subtitle?: string }) {
   return (
-    <div className="mb-4 flex items-center gap-2.5">
+    <div className="mb-3 flex items-center gap-2.5">
       {icon && <span className="text-gold/70">{icon}</span>}
       <div>
         <h2 className="font-display text-base font-medium tracking-wide text-white">{title}</h2>
@@ -244,56 +234,77 @@ function SectionLabel({ icon, title, subtitle }: { icon?: React.ReactNode; title
 }
 
 function QuietState({ message }: { message: string }) {
-  return (
-    <p className="py-2 text-sm italic text-gray">{message}</p>
-  )
+  return <p className="py-2 text-sm italic text-gray">{message}</p>
 }
 
-function NextGathering({ event, remaining }: { event: UpcomingEvent; remaining: number }) {
+function NextGathering({ event, moreEvents }: { event: UpcomingEvent; moreEvents: UpcomingEvent[] }) {
+  const [expanded, setExpanded] = useState(false)
   const { dayLabel, timeLabel, isToday } = formatEventDate(event.start)
   const color = event.guildColor || "#c9a227"
+  const remaining = moreEvents.length
 
   return (
-    <div className="space-y-3">
+    <div className="overflow-hidden rounded-xl border border-gray-dark bg-black-light/60">
       <Link
         href={`/guild/${event.guildId}/rites`}
-        className="group flex items-center gap-4 rounded-xl border border-gray-dark bg-black-light/60 px-5 py-5 transition-all hover:border-gray hover:bg-black-light"
+        className="group flex items-center gap-4 px-4 py-4 transition-all hover:bg-black-light"
       >
-        <div className="flex min-w-[56px] flex-col items-center text-center">
-          <span className={cn("text-[10px] font-medium uppercase tracking-widest", isToday ? "text-gold" : "text-gray")}>
+        {/* Date block */}
+        <div className="flex min-w-[44px] flex-col items-center text-center">
+          <span className={cn("text-[9px] font-medium uppercase tracking-widest", isToday ? "text-gold" : "text-gray")}>
             {dayLabel.split(" ")[0]}
           </span>
-          <span className={cn("font-display text-3xl font-medium leading-tight", isToday ? "text-gold" : "text-white")}>
+          <span className={cn("font-display text-2xl font-medium leading-tight", isToday ? "text-gold" : "text-white")}>
             {new Date(event.start).getDate()}
           </span>
-          <span className="text-[10px] text-gray">
+          <span className="text-[9px] text-gray">
             {new Date(event.start).toLocaleDateString("en-AU", { month: "short" })}
           </span>
         </div>
 
-        <div className="h-12 w-px shrink-0 bg-gray-dark" />
+        <div className="h-10 w-px shrink-0 bg-gray-dark" />
 
         <div className="min-w-0 flex-1">
-          <p className="text-base font-medium text-white group-hover:text-gold transition-colors truncate">{event.title}</p>
-          <div className="mt-1 flex items-center gap-2 text-xs text-gray">
+          <p className="truncate text-sm font-medium text-white transition-colors group-hover:text-gold">{event.title}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-gray">
             <span>{timeLabel}</span>
             <span>·</span>
             <span style={{ color }}>{event.guildName}</span>
           </div>
         </div>
 
-        <div className="shrink-0 text-2xl" style={{ color }}>
-          {event.guildIcon?.startsWith("data:") ? (
-            <img src={event.guildIcon} alt="" className="h-7 w-7 object-contain" />
-          ) : event.guildIcon || "⬡"}
-        </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-gray transition-transform group-hover:translate-x-0.5" />
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray transition-transform group-hover:translate-x-0.5" />
       </Link>
 
+      {/* "N more" toggle */}
       {remaining > 0 && (
-        <p className="text-xs text-gray">
-          {remaining} more gathering{remaining !== 1 ? "s" : ""} coming up
-        </p>
+        <>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex w-full items-center gap-1.5 border-t border-gray-dark/60 px-4 py-2 text-left text-xs text-gray transition-colors hover:text-white"
+          >
+            <ChevronDown className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")} />
+            {expanded ? "Hide" : `+${remaining} more`} coming up
+          </button>
+
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-gray-dark/40 py-1">
+                  {moreEvents.slice(0, 5).map((e) => (
+                    <UpcomingEventRow key={`${e.guildId}-${e.uid}`} event={e} />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
       )}
     </div>
   )
@@ -306,13 +317,51 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
   return (
     <Link
       href={`/guild/${event.guildId}/rites`}
-      className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-black-light"
+      className="group flex items-center gap-3 px-4 py-2 transition-colors hover:bg-black-light"
     >
-      <span className={cn("w-20 shrink-0 text-xs", isToday ? "text-gold" : "text-gray")}>{dayLabel}</span>
-      <span className="min-w-0 flex-1 truncate text-sm text-white group-hover:text-gold transition-colors">{event.title}</span>
-      <span className="shrink-0 text-xs" style={{ color }}>{event.guildName}</span>
-      <span className="shrink-0 text-xs text-gray">{timeLabel}</span>
+      <span className={cn("w-16 shrink-0 text-xs", isToday ? "text-gold" : "text-gray")}>{dayLabel}</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-white transition-colors group-hover:text-gold">{event.title}</span>
+      <span className="shrink-0 text-[10px]" style={{ color }}>{event.guildName}</span>
+      <span className="shrink-0 text-[10px] text-gray">{timeLabel}</span>
     </Link>
+  )
+}
+
+function LiveChambers({ guilds }: { guilds: Guild[] }) {
+  if (guilds.length === 0) {
+    return <QuietState message="No guilds joined yet." />
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-dark bg-black-light/60">
+      {guilds.map((guild, i) => {
+        const color = guild.color || "#c9a227"
+        const chamberUrl = `https://meet.talitamoss.info/${guild.id}`
+
+        return (
+          <a
+            key={guild.id}
+            href={chamberUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black-light",
+              i > 0 && "border-t border-gray-dark/50"
+            )}
+          >
+            <div className="shrink-0 text-lg" style={{ color }}>
+              {guild.icon?.startsWith("data:") ? (
+                <img src={guild.icon} alt="" className="h-5 w-5 object-contain" />
+              ) : guild.icon || "⬡"}
+            </div>
+            <span className="min-w-0 flex-1 truncate text-xs text-gray-light group-hover:text-white transition-colors">
+              {guild.name}
+            </span>
+            <Video className="h-3.5 w-3.5 shrink-0 text-gray transition-colors group-hover:text-gold" />
+          </a>
+        )
+      })}
+    </div>
   )
 }
 
@@ -325,22 +374,18 @@ function PulseRow({ entry, nowSeconds }: { entry: PulseEntry; nowSeconds: number
     <motion.div variants={stagger.item}>
       <Link
         href={`/guild/${entry.guildId}/pulse`}
-        className="group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-black-light"
+        className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-black-light"
       >
-        {/* Guild icon */}
         <div className="shrink-0 text-xl" style={{ color }}>
           {entry.guildIcon?.startsWith("data:") ? (
             <img src={entry.guildIcon} alt="" className="h-5 w-5 object-contain" />
           ) : entry.guildIcon || "⬡"}
         </div>
 
-        {/* Name + activity indicator */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-white">{entry.guildName}</span>
-            {isWarm && (
-              <span className="h-1.5 w-1.5 rounded-full bg-gold/80" />
-            )}
+            {isWarm && <span className="h-1.5 w-1.5 rounded-full bg-gold/80" />}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray">
             <MessageCircle className="h-3 w-3" />
@@ -348,7 +393,6 @@ function PulseRow({ entry, nowSeconds }: { entry: PulseEntry; nowSeconds: number
           </div>
         </div>
 
-        {/* Unread badge */}
         {entry.unreadMessages > 0 && (
           <span
             className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold text-black"
