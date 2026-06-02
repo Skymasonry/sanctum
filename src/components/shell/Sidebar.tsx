@@ -115,9 +115,9 @@ interface SidebarItemProps {
 
 const QUICK_LINKS = [
   { label: "The Pulse", path: "pulse" },
-  { label: "The Chamber", path: "" },
   { label: "Rites", path: "rites" },
 ]
+const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
 
 function SidebarItem({ guild, isActive }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
@@ -190,10 +190,18 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
           >
             {guild.name}
           </div>
+          <a
+            href={CHAMBER_HREF(guild.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
+          >
+            The Chamber
+          </a>
           {QUICK_LINKS.map(({ label, path }) => (
             <Link
               key={label}
-              href={`/guild/${guild.id}${path ? `/${path}` : ""}`}
+              href={`/guild/${guild.id}/${path}`}
               className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
             >
               {label}
