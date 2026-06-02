@@ -151,7 +151,7 @@ export function Hearth({ user, allGuilds, userGuilds, pulseEntries, guildCalenda
 
         {/* The Pulse */}
         <section className="py-8">
-          <SectionLabel icon={<Flame className="h-4 w-4" />} title="The Pulse" subtitle="Where conversation is alive" />
+          <SectionLabel icon={<Flame className="h-4 w-4" />} title="The Chat" subtitle="Where conversation is alive" />
           {activePulse.length === 0 ? (
             <QuietState message="The hearth is quiet this morning." />
           ) : (
