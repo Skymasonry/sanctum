@@ -1,8 +1,8 @@
-name: Deploy Neo
+name: Deploy Sanctum
 
 on:
   push:
-    branches: [neo]
+    branches: [main]
 
 jobs:
   deploy:
@@ -15,15 +15,15 @@ jobs:
           ssh -i /tmp/neo_deploy_key \
             -o StrictHostKeyChecking=no \
             grandmaster@${{ secrets.NEO_HOST }} \
-            "docker exec sanctum-neo-dev-1 rm -rf /app/.next/cache 2>/dev/null || true"
+            "docker exec sanctum-neo-app-1 rm -rf /app/.next/cache 2>/dev/null || true"
           rm /tmp/neo_deploy_key
 
-      - name: Deploy to neo.skymasons.xyz
+      - name: Deploy to sanctum.skymasons.xyz
         run: |
           echo "${{ secrets.NEO_DEPLOY_KEY }}" > /tmp/neo_deploy_key
           chmod 600 /tmp/neo_deploy_key
           ssh -i /tmp/neo_deploy_key \
             -o StrictHostKeyChecking=no \
             grandmaster@${{ secrets.NEO_HOST }} \
-            "bash /home/grandmaster/deploy-neo.sh"
+            "bash /home/grandmaster/deploy-sanctum.sh"
           rm /tmp/neo_deploy_key
