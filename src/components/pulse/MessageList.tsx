@@ -192,7 +192,13 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
                     isGrouped && isOwn && "rounded-tr-2xl",
                     isGrouped && !isOwn && "rounded-tl-2xl"
                   )}>
-                    <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {msg.message.split(/(@\w+)/g).map((part, idx) =>
+                        /^@\w+$/.test(part)
+                          ? <span key={idx} className="font-semibold text-gold">{part}</span>
+                          : part
+                      )}
+                    </p>
                   </div>
                 )}
               </div>

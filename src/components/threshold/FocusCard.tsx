@@ -18,7 +18,7 @@ const typeConfig = {
   pulse: {
     icon: MessageCircle,
     cta: "Enter the Cove",
-    label: "The Pulse",
+    label: "The Chat",
   },
   rite: {
     icon: Calendar,

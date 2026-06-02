@@ -114,7 +114,7 @@ interface SidebarItemProps {
 }
 
 const QUICK_LINKS = [
-  { label: "The Pulse", path: "pulse" },
+  { label: "The Chat", path: "pulse" },
   { label: "Rites", path: "rites" },
 ]
 const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
