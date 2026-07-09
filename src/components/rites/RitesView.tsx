@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo } from "react"
-import { Card, CardIcon, CardTitle } from "@/components/shared"
 import { CalendarEvent } from "@/lib/calendar"
 import {
   Calendar, Clock, Plus, X, MapPin, Repeat,
@@ -720,7 +719,7 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
                 )}
                 <button type="button" onClick={() => setShowFormPicker(!showFormPicker)} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${showFormPicker ? "border-guild text-guild" : "border-gray-dark text-gray hover:border-guild/50 hover:text-guild"}`}><ScrollText className="h-3 w-3" />Add Scroll</button>
                 {talkRoom && !links.some(l => l.type === "pulse") && (
-                  <button type="button" onClick={() => setLinks([...links, { type: "pulse", label: "Open Pulse", url: `/guild/${guildId}/pulse` }])} className="inline-flex items-center gap-1.5 rounded-md border border-gray-dark px-2.5 py-1.5 text-xs text-gray transition-colors hover:border-guild/50 hover:text-guild"><MessageCircle className="h-3 w-3" />Add Pulse</button>
+                  <button type="button" onClick={() => setLinks([...links, { type: "pulse", label: "Open Chat", url: `/guild/${guildId}/pulse` }])} className="inline-flex items-center gap-1.5 rounded-md border border-gray-dark px-2.5 py-1.5 text-xs text-gray transition-colors hover:border-guild/50 hover:text-guild"><MessageCircle className="h-3 w-3" />Add Chat</button>
                 )}
               </div>
               {showFilePicker && folderId && <div className="mt-2"><FilePicker folderId={folderId} onSelect={(f) => { setLinks([...links, { type: "archive", label: f.name, url: `/guild/${guildId}/archive` }]); setShowFilePicker(false) }} onClose={() => setShowFilePicker(false)} /></div>}
