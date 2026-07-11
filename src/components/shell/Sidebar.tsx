@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -113,13 +113,44 @@ interface SidebarItemProps {
   isActive: boolean
 }
 
+const QUICK_LINKS = [
+  { label: "The Chat", path: "pulse" },
+  { label: "Rites", path: "rites" },
+]
+const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
+
 function SidebarItem({ guild, isActive }: SidebarItemProps) {
+  const [open, setOpen] = useState(false)
+  const [flipUp, setFlipUp] = useState(false)
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const itemRef = useRef<HTMLDivElement>(null)
+
+  function handleMouseEnter() {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    openTimer.current = setTimeout(() => {
+      if (itemRef.current) {
+        const rect = itemRef.current.getBoundingClientRect()
+        setFlipUp(rect.bottom + 80 > window.innerHeight)
+      }
+      setOpen(true)
+    }, 150)
+  }
+
+  function handleMouseLeave() {
+    if (openTimer.current) clearTimeout(openTimer.current)
+    closeTimer.current = setTimeout(() => setOpen(false), 200)
+  }
+
   return (
     <motion.div
+      ref={itemRef}
       layout
       layoutId={guild.id}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="group relative"
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Link
         href={`/guild/${guild.id}`}
@@ -133,7 +164,6 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
         }}
         title={guild.name}
       >
-        {/* Active indicator pip */}
         {isActive && (
           <motion.div
             layoutId="active-pip"
@@ -142,12 +172,42 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
-        <span style={{ color: guild.color }}>{guild.icon}</span>
+        <span style={{ color: guild.color }}>{guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-5 w-5 object-contain" /> : guild.icon}</span>
       </Link>
 
-      {/* Tooltip */}
-      <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-gray-dark bg-black px-3 py-1.5 text-sm text-white opacity-0 transition-all duration-200 group-hover:ml-3 group-hover:opacity-100">
-        {guild.name}
+      {/* Hover submenu */}
+      <div
+        className={cn(
+          "absolute left-full z-50 pl-2 transition-all duration-150",
+          flipUp ? "bottom-0" : "top-1/2 -translate-y-1/2",
+          open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
+        )}
+      >
+        <div className="min-w-[160px] overflow-hidden rounded-lg border border-gray-dark bg-black shadow-xl">
+          <div
+            className="border-b border-gray-dark px-3 py-2 text-xs font-semibold uppercase tracking-widest"
+            style={{ color: guild.color }}
+          >
+            {guild.name}
+          </div>
+          <a
+            href={CHAMBER_HREF(guild.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
+          >
+            The Chamber
+          </a>
+          {QUICK_LINKS.map(({ label, path }) => (
+            <Link
+              key={label}
+              href={`/guild/${guild.id}/${path}`}
+              className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </motion.div>
   )

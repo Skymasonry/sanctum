@@ -7,9 +7,9 @@
   --color-black-deep: #0a0a0a;
   --color-black: #111111;
   --color-black-light: #1a1a1a;
-  --color-gray-dark: #2a2a2a;
-  --color-gray: #666666;
-  --color-gray-light: #999999;
+  --color-gray-dark: #333333;
+  --color-gray: #888888;
+  --color-gray-light: #b0b0b0;
   --color-white: #f0f0f0;
   --color-white-dim: #cccccc;
   --color-danger: #dc5050;
@@ -61,9 +61,9 @@
     --black: 17 17 17;
     --black-light: 26 26 26;
 
-    --gray-dark: 42 42 42;
-    --gray: 102 102 102;
-    --gray-light: 153 153 153;
+    --gray-dark: 51 51 51;
+    --gray: 136 136 136;
+    --gray-light: 176 176 176;
 
     --white: 240 240 240;
     --white-dim: 204 204 204;
@@ -85,7 +85,7 @@
 }
 
 @layer base {
-  body {
+body {
     @apply bg-black-deep text-white antialiased;
     font-family: var(--font-body-face), Georgia, serif;
   }

@@ -1,3 +1,10 @@
+export interface GuildApplication {
+  userId: string
+  message?: string
+  agreements: Array<{ id: number; text: string; agreed?: boolean }>
+  appliedAt: string
+}
+
 export interface Guild {
   id: string
   name: string
@@ -8,12 +15,13 @@ export interface Guild {
   seederUid: string
   members: string[]
   pending: string[]
+  applications?: GuildApplication[]
   memberCount: number
   category?: string
-  createdAt: string
-  circleId: string
   patternIntegrity?: string
   evolutionaryPurpose?: string
+  createdAt: string
+  circleId: string
   applicationForm?: {
     agreements: Array<{ id: number; text: string }>
   }

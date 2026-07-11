@@ -20,6 +20,27 @@ services:
       - caddy_default
       - nextcloud_nextcloud_network
 
+  dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: node server.js
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./.next-dev/standalone:/app
+      - ./.next-dev/static:/app/.next/static
+      - ./public:/app/public
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXTCLOUD_INTERNAL_URL=http://nextcloud:80
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - caddy_default
+      - nextcloud_nextcloud_network
+
 networks:
   caddy_default:
     external: true

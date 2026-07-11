@@ -1,6 +1,27 @@
 import { getUser } from "@/lib/auth"
 import { getGuilds, getUserGuilds } from "@/lib/guilds"
-import { HomePage } from "@/components/home/HomePage"
+import { getRooms } from "@/lib/talk"
+import { Hearth } from "@/components/hearth/Hearth"
+import type { Guild } from "@/types/guild"
+import type { TalkRoom } from "@/lib/talk"
+
+export interface PulseEntry {
+  guildId: string
+  guildName: string
+  guildColor: string
+  guildIcon: string
+  token: string
+  lastActivity: number
+  unreadMessages: number
+}
+
+export interface GuildCalendarRef {
+  guildId: string
+  guildName: string
+  guildColor: string
+  guildIcon: string
+  calendarUri: string
+}
 
 export default async function Home() {
   const user = await getUser()
@@ -13,9 +34,10 @@ export default async function Home() {
     )
   }
 
-  const [allGuilds, userGuilds] = await Promise.all([
+  const [allGuilds, userGuilds, rooms] = await Promise.all([
     getGuilds(),
     getUserGuilds(),
+    getRooms().catch(() => [] as TalkRoom[]),
   ])
 
   // Auto-join mandatory guilds the user isn't a member of yet
@@ -47,25 +69,49 @@ export default async function Home() {
     }
   }
 
-  // Collect upcoming events across all user guilds
-  const eventsData: Array<{ guildId: string; guildName: string; guildColor: string; calendarUri: string }> = []
+  // Map talk room tokens to guilds
+  const tokenToGuild = new Map<string, Guild>()
   for (const guild of userGuilds) {
-    if (guild.resources.calendarUri) {
-      eventsData.push({
-        guildId: guild.id,
-        guildName: guild.name,
-        guildColor: guild.color,
-        calendarUri: guild.resources.calendarUri,
-      })
+    if (guild.resources.talkRoom) {
+      tokenToGuild.set(guild.resources.talkRoom, guild)
     }
   }
 
+  // Pulse entries ordered by most recent activity
+  const pulseEntries: PulseEntry[] = rooms
+    .filter((r) => tokenToGuild.has(r.token))
+    .map((r) => {
+      const guild = tokenToGuild.get(r.token)!
+      return {
+        guildId: guild.id,
+        guildName: guild.name,
+        guildColor: guild.color,
+        guildIcon: guild.icon,
+        token: r.token,
+        lastActivity: r.lastActivity,
+        unreadMessages: r.unreadMessages,
+      }
+    })
+    .sort((a, b) => b.lastActivity - a.lastActivity)
+
+  // Calendar refs for client-side event fetching
+  const guildCalendars: GuildCalendarRef[] = userGuilds
+    .filter((g) => g.resources.calendarUri)
+    .map((g) => ({
+      guildId: g.id,
+      guildName: g.name,
+      guildColor: g.color,
+      guildIcon: g.icon,
+      calendarUri: g.resources.calendarUri!,
+    }))
+
   return (
-    <HomePage
+    <Hearth
       user={user}
       allGuilds={allGuilds}
       userGuilds={userGuilds}
-      guildCalendars={eventsData}
+      pulseEntries={pulseEntries}
+      guildCalendars={guildCalendars}
     />
   )
 }

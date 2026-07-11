@@ -51,7 +51,7 @@ export async function determineFocus(guild: Guild): Promise<FocusData> {
     const uniqueActors = [...new Set(recentMessages.map((m: TalkMessage) => m.actorId))]
     return {
       type: "pulse",
-      title: "The Pulse",
+      title: "The Chat",
       description: recentMessages[0]?.message?.substring(0, 80) || "The circle stirs with whispers...",
       meta: `${uniqueActors.length} brothers in conversation`,
       avatars: uniqueActors.slice(0, 4).map(u => `/api/avatar/${u}/32`),
@@ -101,7 +101,7 @@ export async function determineFocus(guild: Guild): Promise<FocusData> {
   
   return {
     type: "pulse",
-    title: "The Pulse",
+    title: "The Chat",
     description: lastMessage?.message?.substring(0, 80) || "The circle awaits your presence...",
     meta: `${guild.memberCount} brothers in the cove`,
     avatars: guild.members.slice(0, 4).map(u => `/api/avatar/${u}/32`),

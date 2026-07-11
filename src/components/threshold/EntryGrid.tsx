@@ -30,7 +30,7 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
     chambers.push({
       id: "pulse",
       icon: MessageCircle,
-      title: "The Pulse",
+      title: "The Chat",
       description: "Whispers in the cove",
       badge: notifications?.pulse,
     })

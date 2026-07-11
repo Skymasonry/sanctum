@@ -28,13 +28,13 @@ export default async function PulsePage({ params }: PulsePageProps) {
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<MessageCircle className="h-10 w-10 text-guild" />}
-        title="The Pulse"
+        title="The Chat"
         subtitle={`Whispers of ${guild.name}`}
       />
 
       <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-dark bg-black">
         <MessageList messages={messages} currentUser={user?.username} />
-        <ChatInput guildId={guildId} token={token} />
+        <ChatInput guildId={guildId} token={token} members={guild.members} />
       </div>
     </div>
   )

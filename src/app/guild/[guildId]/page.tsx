@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth"
 import { determineFocus } from "@/lib/focus"
 import { getChamberNotifications } from "@/lib/notifications"
 import { notFound } from "next/navigation"
+import { GuildThresholdClient } from "./GuildThresholdClient"
 
 interface ThresholdPageProps {
   params: Promise<{ guildId: string }>
@@ -44,42 +45,47 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
     ? `/guild/${guildId}/scrolls`
     : `/guild/${guildId}/pulse`
 
+  const isSeeder = !!(user?.username && guild.seederUid &&
+    user.username.toLowerCase() === guild.seederUid.toLowerCase())
+
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
-      <ChamberHeader
-        icon={guild.icon}
-        title={guild.name}
-        subtitle={guild.description}
-        centered
-        meta={
-          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-gray">
-            <span>Seeded by <span className="text-guild">{guild.seederUid}</span></span>
-            <span className="text-gray-dark">·</span>
-            <span>{guild.memberCount} members</span>
-            <span className="text-gray-dark">·</span>
-            <span>{formatAdmission(guild.admission)}</span>
+    <GuildThresholdClient guild={guild} isSeeder={isSeeder}>
+      <div className="flex h-full flex-col p-6 lg:p-8">
+        <ChamberHeader
+          icon={guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-9 w-9 object-contain" /> : guild.icon}
+          title={guild.name}
+          subtitle={guild.description}
+          centered
+          meta={
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-gray">
+              <span>Seeded by <span className="text-guild">{guild.seederUid}</span></span>
+              <span className="text-gray-dark">&middot;</span>
+              <span>{guild.memberCount} members</span>
+              <span className="text-gray-dark">&middot;</span>
+              <span>{formatAdmission(guild.admission)}</span>
+            </div>
+          }
+        />
+
+        <div className="mx-auto w-full max-w-3xl flex-1">
+          {/* Dynamic Focus Card */}
+          <div className="mb-8">
+            <FocusCard
+              type={focus.type}
+              title={focus.title}
+              description={focus.description}
+              href={focusHref}
+              meta={focus.meta}
+              avatars={focus.avatars}
+              progress={focus.quest ? { current: focus.quest.progress, total: focus.quest.total } : undefined}
+            />
           </div>
-        }
-      />
 
-      <div className="mx-auto w-full max-w-3xl flex-1">
-        {/* Dynamic Focus Card */}
-        <div className="mb-8">
-          <FocusCard
-            type={focus.type}
-            title={focus.title}
-            description={focus.description}
-            href={focusHref}
-            meta={focus.meta}
-            avatars={focus.avatars}
-            progress={focus.quest ? { current: focus.quest.progress, total: focus.quest.total } : undefined}
-          />
+          {/* Entry Grid */}
+          <EntryGrid guildId={guildId} guild={guild} notifications={notifications} />
+
         </div>
-
-        {/* Entry Grid */}
-        <EntryGrid guildId={guildId} guild={guild} notifications={notifications} />
-
       </div>
-    </div>
+    </GuildThresholdClient>
   )
 }

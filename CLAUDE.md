@@ -66,9 +66,46 @@ src/
   styles/        # Fonts (Cinzel display + Cormorant Garamond body)
 ```
 
-## Contribution Rules
+## Contribution Workflow
 
-- **Branch strategy:** Work on feature branches, open PRs against `main`
+Work happens on branches pushed directly to `grandmasterskymason/sanctum`. Changes are previewed on `neo.skymasons.xyz` before going to production.
+
+On mainframe, the repo is at `~/sanctum/`. You are a collaborator — no personal fork needed.
+
+### Step 1 — Start a branch
+
+```bash
+cd ~/sanctum
+git fetch origin
+git checkout -b feature/your-feature origin/neo
+# make changes
+git add .
+git commit -m "Description of change"
+git push origin feature/your-feature
+```
+
+### Step 2 — Open a PR to `neo`
+
+Open a PR from `feature/your-feature` → `grandmasterskymason/sanctum:neo`. You can merge this yourself once you're happy with it. Merging triggers an automatic deploy to `neo.skymasons.xyz`.
+
+### Step 3 — Preview on neo
+
+Check your changes at `neo.skymasons.xyz`. Iterate by pushing more commits to your branch and merging to `neo`. The site redeploys on every merge.
+
+### Step 4 — Promote to production
+
+When the feature is ready, open a PR from `neo` → `main`. Grand Master reviews and merges. Merging to `main` triggers an automatic deploy to `sanctum.skymasons.xyz`.
+
+---
+
+## Hard Limits
+
+- **Never merge to `main`** — only Grand Master merges `neo → main` via GitHub UI; you may run `gh pr merge` for PRs targeting `neo`
+- **Never commit directly to `neo` or `main`** — always via a branch first
+- **Never edit, push to, or close another contributor's branch or PR** — you may read them for context but must not modify them
+
+## Code Rules
+
 - **Don't break SSO:** All authenticated routes depend on Authentik forward auth headers
 - **Don't hardcode Nextcloud URLs:** Use the proxy routes in `src/lib/api.ts` (`fetchFromNextcloud`, `postToNextcloud`)
 - **Guild/order mapping:** Keep "guilds" in frontend, "orders" stays in backend API responses
