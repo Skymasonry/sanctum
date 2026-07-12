@@ -1,29 +1,18 @@
-name: Deploy Sanctum
+name: Deploy Sanctum                                                                                 
 
-on:
-  push:
-    branches: [main]
+  on:
+    push:
+      branches: [main]
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fix cache permissions
-        run: |
-          echo "${{ secrets.NEO_DEPLOY_KEY }}" > /tmp/neo_deploy_key
-          chmod 600 /tmp/neo_deploy_key
-          ssh -i /tmp/neo_deploy_key \
-            -o StrictHostKeyChecking=no \
-            grandmaster@${{ secrets.NEO_HOST }} \
-            "docker exec sanctum-neo-app-1 rm -rf /app/.next/cache 2>/dev/null || true"
-          rm /tmp/neo_deploy_key
-
-      - name: Deploy to sanctum.skymasons.xyz
-        run: |
-          echo "${{ secrets.NEO_DEPLOY_KEY }}" > /tmp/neo_deploy_key
-          chmod 600 /tmp/neo_deploy_key
-          ssh -i /tmp/neo_deploy_key \
-            -o StrictHostKeyChecking=no \
-            grandmaster@${{ secrets.NEO_HOST }} \
-            "bash /home/grandmaster/deploy-sanctum.sh"
-          rm /tmp/neo_deploy_key
+  jobs:
+    deploy:
+      runs-on: ubuntu-latest                                                                             
+      steps:
+        - name: Deploy to sanctum.skymasons.xyz                                                          
+          run: |                                            
+            echo "${{ secrets.SANCTUM_DEPLOY_KEY }}" > /tmp/sanctum_deploy_key                         
+            chmod 600 /tmp/sanctum_deploy_key                                                            
+            ssh -i /tmp/sanctum_deploy_key \                                                             
+              -o StrictHostKeyChecking=no \                                                              
+              grandmaster@${{ secrets.NEO_HOST }}                                                        
+            rm /tmp/sanctum_deploy_key           
