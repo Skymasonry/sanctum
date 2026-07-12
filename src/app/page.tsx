@@ -1,27 +1,10 @@
+import { headers } from "next/headers"
+
 import { getUser } from "@/lib/auth"
-import { getGuilds, getUserGuilds } from "@/lib/guilds"
-import { getRooms } from "@/lib/talk"
-import { Hearth } from "@/components/hearth/Hearth"
-import type { Guild } from "@/types/guild"
-import type { TalkRoom } from "@/lib/talk"
+import { ThresholdDashboard } from "@/components/threshold-dashboard"
+import type { ThresholdData } from "@/types/threshold"
 
-export interface PulseEntry {
-  guildId: string
-  guildName: string
-  guildColor: string
-  guildIcon: string
-  token: string
-  lastActivity: number
-  unreadMessages: number
-}
-
-export interface GuildCalendarRef {
-  guildId: string
-  guildName: string
-  guildColor: string
-  guildIcon: string
-  calendarUri: string
-}
+export const dynamic = "force-dynamic"
 
 export default async function Home() {
   const user = await getUser()
@@ -34,84 +17,41 @@ export default async function Home() {
     )
   }
 
-  const [allGuilds, userGuilds, rooms] = await Promise.all([
-    getGuilds(),
-    getUserGuilds(),
-    getRooms().catch(() => [] as TalkRoom[]),
-  ])
+  const initialData = await fetchThreshold()
 
-  // Auto-join mandatory guilds the user isn't a member of yet
-  const username = user.username?.toLowerCase() || ""
-  for (const guild of allGuilds) {
-    if (
-      guild.admission === "mandatory" &&
-      !guild.members.some((m: string) => m.toLowerCase() === username)
-    ) {
-      try {
-        const { headers: h } = await import("next/headers")
-        const headersList = await h()
-        const authUser = headersList.get("x-authentik-username")
-        const authGroups = headersList.get("x-authentik-groups")
-        const authName = headersList.get("x-authentik-name")
-        if (authUser) {
-          const { postToNextcloud } = await import("@/lib/api")
-          await postToNextcloud("/apps/skymasonsnav/api/orders/" + guild.id + "/join", {}, {
-            headers: {
-              "X-Authentik-Username": authUser,
-              "X-Authentik-Groups": authGroups || "",
-              "X-Authentik-Name": authName || "",
-            },
-          })
-        }
-      } catch {
-        // Ignore join failures
-      }
-    }
+  return <ThresholdDashboard initialData={initialData} />
+}
+
+async function fetchThreshold(): Promise<ThresholdData> {
+  const headersList = await headers()
+  const host = headersList.get("host") || "localhost:3000"
+  const proto = headersList.get("x-forwarded-proto") || "https"
+  const cookie = headersList.get("cookie") || ""
+  const forward = {
+    "x-authentik-username": headersList.get("x-authentik-username") || "",
+    "x-authentik-groups": headersList.get("x-authentik-groups") || "",
+    "x-authentik-name": headersList.get("x-authentik-name") || "",
+    "x-authentik-email": headersList.get("x-authentik-email") || "",
+    cookie,
   }
-
-  // Map talk room tokens to guilds
-  const tokenToGuild = new Map<string, Guild>()
-  for (const guild of userGuilds) {
-    if (guild.resources.talkRoom) {
-      tokenToGuild.set(guild.resources.talkRoom, guild)
-    }
-  }
-
-  // Pulse entries ordered by most recent activity
-  const pulseEntries: PulseEntry[] = rooms
-    .filter((r) => tokenToGuild.has(r.token))
-    .map((r) => {
-      const guild = tokenToGuild.get(r.token)!
-      return {
-        guildId: guild.id,
-        guildName: guild.name,
-        guildColor: guild.color,
-        guildIcon: guild.icon,
-        token: r.token,
-        lastActivity: r.lastActivity,
-        unreadMessages: r.unreadMessages,
-      }
+  try {
+    const res = await fetch(`${proto}://${host}/api/threshold`, {
+      headers: forward,
+      cache: "no-store",
     })
-    .sort((a, b) => b.lastActivity - a.lastActivity)
-
-  // Calendar refs for client-side event fetching
-  const guildCalendars: GuildCalendarRef[] = userGuilds
-    .filter((g) => g.resources.calendarUri)
-    .map((g) => ({
-      guildId: g.id,
-      guildName: g.name,
-      guildColor: g.color,
-      guildIcon: g.icon,
-      calendarUri: g.resources.calendarUri!,
-    }))
-
-  return (
-    <Hearth
-      user={user}
-      allGuilds={allGuilds}
-      userGuilds={userGuilds}
-      pulseEntries={pulseEntries}
-      guildCalendars={guildCalendars}
-    />
-  )
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return (await res.json()) as ThresholdData
+  } catch (err) {
+    console.error("Failed to fetch /api/threshold:", err)
+    return {
+      member: {
+        name: "",
+        avatar: null,
+        lastSeen: null,
+      },
+      live: [],
+      stirring: [],
+      gatherings: [],
+    }
+  }
 }
