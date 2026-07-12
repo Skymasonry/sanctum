@@ -91,20 +91,48 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const pinToBottom = () => {
-    const el = scrollContainerRef.current
-    if (el) el.scrollTop = el.scrollHeight
-    bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" as ScrollBehavior })
+    // Walk every ancestor of the sentinel; if it's a scrollable element,
+    // pin it to the bottom. Handles the case where the actual scroll
+    // container is a page-level ancestor (e.g. <main>) rather than the
+    // MessageList's own overflow-auto div.
+    const sentinel = bottomRef.current
+    if (!sentinel) return
+    let node: HTMLElement | null = sentinel.parentElement
+    while (node) {
+      const style = getComputedStyle(node)
+      if (
+        (style.overflowY === "auto" || style.overflowY === "scroll") &&
+        node.scrollHeight > node.clientHeight
+      ) {
+        node.scrollTop = node.scrollHeight
+      }
+      node = node.parentElement
+    }
+    sentinel.scrollIntoView({ block: "end", behavior: "instant" as ScrollBehavior })
   }
 
-  // Pin on messages change: sync pass, then post-paint pass to catch
+  // Disable browser scroll restoration so it doesn't fight us on reload.
+  useEffect(() => {
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual"
+    }
+  }, [])
+
+  // Pin on messages change: sync pass, then post-paint passes to catch
   // layout growth from avatars/media loading in.
   useLayoutEffect(() => {
     pinToBottom()
-    const raf = requestAnimationFrame(() => {
+    const raf1 = requestAnimationFrame(() => {
       pinToBottom()
       requestAnimationFrame(pinToBottom)
     })
-    return () => cancelAnimationFrame(raf)
+    const t1 = setTimeout(pinToBottom, 100)
+    const t2 = setTimeout(pinToBottom, 500)
+    return () => {
+      cancelAnimationFrame(raf1)
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
   }, [messages])
 
   // Repin whenever any child image finishes loading (fires per-image).
