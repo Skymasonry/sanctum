@@ -88,26 +88,31 @@ function MediaContent({ msg }: { msg: TalkMessage }) {
 
 export function MessageList({ messages, currentUser }: MessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
+  const pinToBottom = () => {
     const el = scrollContainerRef.current
     if (el) el.scrollTop = el.scrollHeight
+    bottomRef.current?.scrollIntoView({ block: "end", behavior: "instant" as ScrollBehavior })
   }
 
-  // Synchronous pass so the paint is at the bottom, then a rAF pass
-  // to catch layout growth from async content (avatars, media).
+  // Pin on messages change: sync pass, then post-paint pass to catch
+  // layout growth from avatars/media loading in.
   useLayoutEffect(() => {
-    scrollToBottom()
-    const raf = requestAnimationFrame(scrollToBottom)
+    pinToBottom()
+    const raf = requestAnimationFrame(() => {
+      pinToBottom()
+      requestAnimationFrame(pinToBottom)
+    })
     return () => cancelAnimationFrame(raf)
   }, [messages])
 
-  // Re-run when images inside the scroll container finish loading.
+  // Repin whenever any child image finishes loading (fires per-image).
   useEffect(() => {
     const el = scrollContainerRef.current
     if (!el) return
+    const handler = () => pinToBottom()
     const imgs = el.querySelectorAll("img")
-    const handler = () => scrollToBottom()
     imgs.forEach(img => {
       if (!img.complete) img.addEventListener("load", handler, { once: true })
     })
@@ -225,6 +230,7 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
           </div>
         )
       })}
+      <div ref={bottomRef} aria-hidden />
     </div>
   )
 }
