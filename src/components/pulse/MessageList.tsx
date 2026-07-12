@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useLayoutEffect } from "react"
 import { Bell } from "lucide-react"
 import type { TalkMessage } from "@/lib/talk"
 import { cn } from "@/lib/utils"
@@ -89,10 +89,29 @@ function MediaContent({ msg }: { msg: TalkMessage }) {
 export function MessageList({ messages, currentUser }: MessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  const scrollToBottom = () => {
+    const el = scrollContainerRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }
+
+  // Synchronous pass so the paint is at the bottom, then a rAF pass
+  // to catch layout growth from async content (avatars, media).
+  useLayoutEffect(() => {
+    scrollToBottom()
+    const raf = requestAnimationFrame(scrollToBottom)
+    return () => cancelAnimationFrame(raf)
+  }, [messages])
+
+  // Re-run when images inside the scroll container finish loading.
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-    }
+    const el = scrollContainerRef.current
+    if (!el) return
+    const imgs = el.querySelectorAll("img")
+    const handler = () => scrollToBottom()
+    imgs.forEach(img => {
+      if (!img.complete) img.addEventListener("load", handler, { once: true })
+    })
+    return () => imgs.forEach(img => img.removeEventListener("load", handler))
   }, [messages])
 
   const visibleMessages = messages.filter(
