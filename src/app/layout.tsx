@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { cinzel, cormorant } from "@/styles/fonts"
+import { cinzel, cormorant, jetbrainsMono } from "@/styles/fonts"
 import { Sidebar, Header } from "@/components/shell"
 import { ServiceWorkerRegistration } from "@/components/shell/ServiceWorkerRegistration"
 import { getUser } from "@/lib/auth"
@@ -31,7 +31,7 @@ export default async function RootLayout({
   const guilds = await getUserGuilds()
 
   return (
-    <html lang="en" className={`${cinzel.variable} ${cormorant.variable}`}>
+    <html lang="en" className={`${cinzel.variable} ${cormorant.variable} ${jetbrainsMono.variable}`}>
       <body className="flex h-screen overflow-hidden">
         <ServiceWorkerRegistration />
         <Sidebar guilds={guilds} />

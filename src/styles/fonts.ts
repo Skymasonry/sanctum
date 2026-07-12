@@ -1,4 +1,4 @@
-import { Cinzel, Cormorant_Garamond } from "next/font/google"
+import { Cinzel, Cormorant_Garamond, JetBrains_Mono } from "next/font/google"
 
 export const cinzel = Cinzel({
   subsets: ["latin"],
@@ -11,5 +11,12 @@ export const cormorant = Cormorant_Garamond({
   variable: "--font-body-face",
   weight: ["300", "400", "500", "600"],
   style: ["normal", "italic"],
+  display: "swap",
+})
+
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-face",
+  weight: ["300", "400", "500"],
   display: "swap",
 })
