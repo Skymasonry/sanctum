@@ -1,7 +1,7 @@
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { postToNextcloud } from "@/lib/api"
+import { fetchFromNextcloud, postToNextcloud } from "@/lib/api"
 import { getEvents } from "@/lib/calendar"
 import { getGuilds } from "@/lib/guilds"
 import { getRooms, type TalkRoom } from "@/lib/talk"
@@ -16,7 +16,7 @@ const MAX_GATHERINGS = 15
 // Only look this far ahead when picking upcoming events.
 const HORIZON_MS = 90 * 24 * 60 * 60 * 1000
 
-export async function GET() {
+export async function GET(request: Request) {
   const headersList = await headers()
   const username = headersList.get("x-authentik-username")
   const groups = headersList.get("x-authentik-groups") || ""
@@ -32,11 +32,17 @@ export async function GET() {
     "X-Authentik-Name": name,
   }
 
+  // Only advance the "since {last visit}" pointer when this call marks
+  // an actual dashboard entry (?touch=1). Polls and Sidebar fetches
+  // leave it alone.
+  const url = new URL(request.url)
+  const shouldTouch = url.searchParams.get("touch") === "1"
+
   const guilds = await getGuilds()
 
   const [rooms, lastSeenResp, gatherings] = await Promise.all([
     getRooms(),
-    touchLastSeen(authHeaders),
+    shouldTouch ? touchLastSeen(authHeaders) : readLastSeen(authHeaders),
     collectGatherings(guilds),
   ])
 
@@ -142,6 +148,20 @@ async function touchLastSeen(
     )
   } catch (err) {
     console.error("touchLastSeen failed:", err)
+    return { previous: null, current: new Date().toISOString() }
+  }
+}
+
+async function readLastSeen(
+  authHeaders: Record<string, string>,
+): Promise<{ previous: string | null; current: string }> {
+  try {
+    const resp = await fetchFromNextcloud(
+      "/apps/skymasonsnav/api/threshold/last-seen",
+      { headers: authHeaders },
+    )
+    return { previous: resp?.lastSeen ?? null, current: new Date().toISOString() }
+  } catch {
     return { previous: null, current: new Date().toISOString() }
   }
 }

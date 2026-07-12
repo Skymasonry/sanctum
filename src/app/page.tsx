@@ -35,7 +35,7 @@ async function fetchThreshold(): Promise<ThresholdData> {
     cookie,
   }
   try {
-    const res = await fetch(`${proto}://${host}/api/threshold`, {
+    const res = await fetch(`${proto}://${host}/api/threshold?touch=1`, {
       headers: forward,
       cache: "no-store",
     })

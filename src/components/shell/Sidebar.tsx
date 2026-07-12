@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
 import type { Guild } from "@/types/guild"
 import { InviteButton } from "./InviteButton"
 
@@ -35,6 +36,7 @@ export function Sidebar({ guilds }: SidebarProps) {
   const pathname = usePathname()
   const currentGuildId = pathname.match(/\/guild\/([^/]+)/)?.[1]
   const [accessOrder, setAccessOrder] = useState<string[]>([])
+  const signals = useThresholdSignals()
 
   // Load access order from localStorage on mount
   useEffect(() => {
@@ -92,6 +94,7 @@ export function Sidebar({ guilds }: SidebarProps) {
               key={guild.id}
               guild={guild}
               isActive={currentGuildId === guild.id}
+              signal={signals.get(guild.id)}
             />
           ))}
         </LayoutGroup>
@@ -111,6 +114,7 @@ export function Sidebar({ guilds }: SidebarProps) {
 interface SidebarItemProps {
   guild: Guild
   isActive: boolean
+  signal?: GuildSignal
 }
 
 const QUICK_LINKS = [
@@ -119,7 +123,7 @@ const QUICK_LINKS = [
 ]
 const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
 
-function SidebarItem({ guild, isActive }: SidebarItemProps) {
+function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
   const [flipUp, setFlipUp] = useState(false)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -173,6 +177,19 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
           />
         )}
         <span style={{ color: guild.color }}>{guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-5 w-5 object-contain" /> : guild.icon}</span>
+
+        {signal?.isLive ? (
+          <span
+            aria-label="Live now"
+            className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
+            style={{ boxShadow: "0 0 6px #d4623a" }}
+          />
+        ) : signal?.hasUnread ? (
+          <span
+            aria-label="Unread"
+            className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold"
+          />
+        ) : null}
       </Link>
 
       {/* Hover submenu */}
