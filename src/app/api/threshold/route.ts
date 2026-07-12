@@ -2,13 +2,19 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { postToNextcloud } from "@/lib/api"
+import { getEvents } from "@/lib/calendar"
 import { getGuilds } from "@/lib/guilds"
 import { getRooms, type TalkRoom } from "@/lib/talk"
+import type { Guild } from "@/types/guild"
 import type {
   Gathering,
   StirringGuild,
   ThresholdData,
 } from "@/types/threshold"
+
+const MAX_GATHERINGS = 15
+// Only look this far ahead when picking upcoming events.
+const HORIZON_MS = 90 * 24 * 60 * 60 * 1000
 
 export async function GET() {
   const headersList = await headers()
@@ -26,10 +32,12 @@ export async function GET() {
     "X-Authentik-Name": name,
   }
 
-  const [guilds, rooms, lastSeenResp] = await Promise.all([
-    getGuilds(),
+  const guilds = await getGuilds()
+
+  const [rooms, lastSeenResp, gatherings] = await Promise.all([
     getRooms(),
     touchLastSeen(authHeaders),
+    collectGatherings(guilds),
   ])
 
   const roomsByToken = new Map<string, TalkRoom>()
@@ -62,8 +70,6 @@ export async function GET() {
     return bT - aT
   })
 
-  const gatherings: Gathering[] = []
-
   const data: ThresholdData = {
     member: {
       name: name || username,
@@ -76,6 +82,53 @@ export async function GET() {
   }
 
   return NextResponse.json(data)
+}
+
+async function collectGatherings(guilds: Guild[]): Promise<Gathering[]> {
+  const now = Date.now()
+  const horizon = now + HORIZON_MS
+
+  const perGuild = await Promise.all(
+    guilds
+      .filter(g => !!g.resources?.calendarUri)
+      .map(async g => {
+        try {
+          const events = await getEvents(g.resources.calendarUri!)
+          return events
+            .map(ev => toGathering(ev, g))
+            .filter((ev): ev is Gathering => {
+              if (!ev) return false
+              const t = Date.parse(ev.startsAt)
+              return Number.isFinite(t) && t >= now && t <= horizon
+            })
+        } catch {
+          return [] as Gathering[]
+        }
+      }),
+  )
+
+  return perGuild
+    .flat()
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+    .slice(0, MAX_GATHERINGS)
+}
+
+function toGathering(
+  ev: { uid: string; title: string; start: string; location?: string },
+  g: Guild,
+): Gathering | null {
+  if (!ev.start) return null
+  return {
+    id: `${g.id}:${ev.uid}`,
+    title: ev.title,
+    startsAt: ev.start,
+    location: ev.location || null,
+    guild: g.name,
+    attending: 0,
+    capacity: null,
+    rsvp: null,
+    accessModel: g.admission === "closed" ? "apply" : "join",
+  }
 }
 
 async function touchLastSeen(
