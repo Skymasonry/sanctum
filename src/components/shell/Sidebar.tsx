@@ -117,38 +117,23 @@ interface SidebarItemProps {
   signal?: GuildSignal
 }
 
-const QUICK_LINKS = [
-  { label: "The Chat", path: "pulse" },
-  { label: "Rites", path: "rites" },
-]
-const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
-
 function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
-  const [flipUp, setFlipUp] = useState(false)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const itemRef = useRef<HTMLDivElement>(null)
 
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
-    openTimer.current = setTimeout(() => {
-      if (itemRef.current) {
-        const rect = itemRef.current.getBoundingClientRect()
-        setFlipUp(rect.bottom + 80 > window.innerHeight)
-      }
-      setOpen(true)
-    }, 150)
+    openTimer.current = setTimeout(() => setOpen(true), 400)
   }
 
   function handleMouseLeave() {
     if (openTimer.current) clearTimeout(openTimer.current)
-    closeTimer.current = setTimeout(() => setOpen(false), 200)
+    closeTimer.current = setTimeout(() => setOpen(false), 100)
   }
 
   return (
     <motion.div
-      ref={itemRef}
       layout
       layoutId={guild.id}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
@@ -192,38 +177,20 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
         ) : null}
       </Link>
 
-      {/* Hover submenu */}
+      {/* Hover name-only tooltip */}
       <div
         className={cn(
-          "absolute left-full z-50 pl-2 transition-all duration-150",
-          flipUp ? "bottom-0" : "top-1/2 -translate-y-1/2",
-          open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
+          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-2 transition-all duration-150",
+          open ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0",
         )}
       >
-        <div className="min-w-[160px] overflow-hidden rounded-lg border border-gray-dark bg-black shadow-xl">
+        <div className="rounded-md border border-gray-dark bg-black px-2.5 py-1.5 shadow-xl">
           <div
-            className="border-b border-gray-dark px-3 py-2 text-xs font-semibold uppercase tracking-widest"
+            className="whitespace-nowrap text-xs font-medium tracking-wider"
             style={{ color: guild.color }}
           >
             {guild.name}
           </div>
-          <a
-            href={CHAMBER_HREF(guild.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
-          >
-            The Chamber
-          </a>
-          {QUICK_LINKS.map(({ label, path }) => (
-            <Link
-              key={label}
-              href={`/guild/${guild.id}/${path}`}
-              className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
-            >
-              {label}
-            </Link>
-          ))}
         </div>
       </div>
     </motion.div>

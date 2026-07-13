@@ -11,24 +11,32 @@ interface BrotherhoodPageProps {
 }
 
 function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolean }) {
+  const profileHref = `https://brothers.skymasons.xyz/apps/contacts/?search=${encodeURIComponent(username)}`
   return (
-    <Card>
-      <div className="flex items-center gap-4">
-        <img
-          src={`/api/avatar/${username}/48`}
-          alt={username}
-          className="h-12 w-12 flex-shrink-0 rounded-full"
-        />
-        <div className="min-w-0 flex-1">
-          <CardTitle className={isSeeder ? "text-gold group-hover:text-gold" : undefined}>
-            {username}
-          </CardTitle>
-          {isSeeder && (
-            <p className="text-sm text-gold/70">Seeder</p>
-          )}
+    <a
+      href={profileHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block transition-transform hover:-translate-y-0.5"
+    >
+      <Card>
+        <div className="flex items-center gap-4">
+          <img
+            src={`/api/avatar/${username}/48`}
+            alt={username}
+            className="h-12 w-12 flex-shrink-0 rounded-full"
+          />
+          <div className="min-w-0 flex-1">
+            <CardTitle className={isSeeder ? "text-gold group-hover:text-gold" : undefined}>
+              {username}
+            </CardTitle>
+            {isSeeder && (
+              <p className="text-sm text-gold/70">Seeder</p>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </a>
   )
 }
 
