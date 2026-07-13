@@ -98,6 +98,18 @@ export function Sidebar({ guilds }: SidebarProps) {
             />
           ))}
         </LayoutGroup>
+        <Link
+          href="/discover"
+          className={cn(
+            "mt-1 flex h-10 w-10 items-center justify-center rounded-xl text-lg text-faint transition-all duration-150",
+            "hover:scale-110 hover:bg-black-light hover:text-gold",
+            pathname === "/discover" && "bg-black-light text-gold",
+          )}
+          title="Discover guilds"
+          aria-label="Discover guilds"
+        >
+          +
+        </Link>
       </nav>
 
       {/* Bottom actions */}
