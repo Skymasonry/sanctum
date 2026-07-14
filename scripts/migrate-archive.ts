@@ -105,7 +105,7 @@ interface LegacyNode {
   id: number
   name: string
   type: "file" | "folder"
-  mime?: string
+  mimetype?: string
   size?: number
   modified: number
 }
@@ -148,7 +148,7 @@ async function walk(
           name: item.name,
           legacyFileId: item.id,
           sizeBytes: item.size ?? 0,
-          mime: item.mime ?? "application/octet-stream",
+          mime: item.mimetype ?? "application/octet-stream",
           createdBy,
         })
         files += 1
