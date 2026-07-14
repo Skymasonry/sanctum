@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ChamberHeader, EmptyState, Card, CardTitle } from "@/components/shared"
-import { Target, Clock, MessageCircle, Plus, ExternalLink } from "lucide-react"
+import { Target, Clock, MessageCircle, Plus } from "lucide-react"
 import type { DeckStack, DeckCard } from "@/lib/deck"
 
 interface QuestBoardProps {
@@ -152,15 +152,6 @@ export function QuestBoard({ guildId, guildName, boardId, initialStacks }: Quest
             <Plus className="h-4 w-4" />
             Create Quest
           </button>
-          <a
-            href={`https://brothers.skymasons.xyz/apps/deck/board/${boardId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-dark px-4 py-2 text-sm text-gray transition-colors hover:border-guild/50 hover:text-guild"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Open Board
-          </a>
         </div>
       )}
 

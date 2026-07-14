@@ -73,16 +73,28 @@ function FileRow({
           </div>
         </div>
         <div className="relative flex items-center gap-1">
-          {file.type === "file" && file.path && (
-            <a
-              href={`https://brothers.skymasons.xyz/remote.php/dav/files/${file.path}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray transition-all hover:bg-guild/10 hover:text-guild"
-              title="Download"
-            >
-              <Download className="h-4 w-4" />
-            </a>
+          {file.type === "file" && (
+            <>
+              {file.mime?.startsWith("image/") && (
+                <a
+                  href={`/api/talk/media/${file.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-gray transition-all hover:bg-guild/10 hover:text-guild"
+                  title="View"
+                >
+                  <Image className="h-4 w-4" />
+                </a>
+              )}
+              <a
+                href={`/api/talk/media/${file.id}`}
+                download={file.name}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray transition-all hover:bg-guild/10 hover:text-guild"
+                title="Download"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+            </>
           )}
           <button
             onClick={() => setShowActions(!showActions)}
