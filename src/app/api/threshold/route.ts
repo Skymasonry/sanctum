@@ -38,18 +38,25 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const shouldTouch = url.searchParams.get("touch") === "1"
 
-  const guilds = await getGuilds()
+  // /api/threshold is a per-user surface. Never return guilds the caller
+  // isn't a member of, even by name — that would leak the existence of
+  // private guilds. Source of truth: orders.json members[].
+  const allGuilds = await getGuilds()
+  const nameLc = username.toLowerCase()
+  const myGuilds = allGuilds.filter(g =>
+    (g.members ?? []).some(m => m.toLowerCase() === nameLc),
+  )
 
   const [rooms, lastSeenResp, gatherings] = await Promise.all([
     getRooms(),
     shouldTouch ? touchLastSeen(authHeaders) : readLastSeen(authHeaders),
-    collectGatherings(guilds),
+    collectGatherings(myGuilds),
   ])
 
   const roomsByToken = new Map<string, TalkRoom>()
   for (const r of rooms) roomsByToken.set(r.token, r)
 
-  const stirring: StirringGuild[] = guilds.map(g => {
+  const stirring: StirringGuild[] = myGuilds.map(g => {
     const token = g.resources?.talkRoom || null
     const room = token ? roomsByToken.get(token) : undefined
     return {
