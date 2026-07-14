@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Send, Image, Mic, MicOff, Video, Loader2, AtSign } from "lucide-react"
 import { sendMessage } from "@/app/guild/[guildId]/pulse/actions"
 import { cn } from "@/lib/utils"
@@ -12,6 +13,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
+  const router = useRouter()
   const [message, setMessage] = useState("")
   const [isPending, startTransition] = useTransition()
   const [isUploading, setIsUploading] = useState(false)
@@ -90,9 +92,19 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
       const formData = new FormData()
       formData.append("file", file)
       const resp = await fetch(`/api/talk/${token}/upload`, { method: "POST", body: formData })
-      if (!resp.ok) console.error("Upload failed:", await resp.json().catch(() => ({})))
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({})) as { error?: string }
+        console.error("Upload failed:", err)
+        setError(err.error || "Upload failed")
+        return
+      }
+      // Server action path (text send) refreshes via revalidatePath. This
+      // client fetch has to trigger the RSC re-fetch itself so the new
+      // media message renders without a full reload.
+      router.refresh()
     } catch (err) {
       console.error("Upload error:", err)
+      setError("Upload failed")
     } finally {
       setIsUploading(false)
     }
