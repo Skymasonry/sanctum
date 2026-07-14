@@ -20,11 +20,58 @@
  *
  *   npx tsx scripts/migrate-archive.ts --all
  */
+import http from "node:http"
+import https from "node:https"
+
 import { db } from "../src/lib/db"
 import { createFolder, importFromLegacyKey } from "../src/lib/files"
 
 const NC = process.env.NEXTCLOUD_URL ?? "https://brothers.skymasons.xyz"
+const NC_HOST_HEADER = process.env.NEXTCLOUD_HOST ?? "brothers.skymasons.xyz"
 const NC_WALKER = process.env.NEXTCLOUD_WALKER ?? "admin"
+
+function ncFetch<T>(pathname: string, seeder: string): Promise<T | null> {
+  const url = new URL(pathname, NC)
+  const lib = url.protocol === "https:" ? https : http
+  return new Promise(resolve => {
+    const req = lib.request(
+      {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === "https:" ? 443 : 80),
+        path: url.pathname + url.search,
+        method: "GET",
+        headers: {
+          "Host": NC_HOST_HEADER,
+          "Accept": "application/json",
+          "X-Authentik-Username": seeder,
+          "X-Authentik-Groups": "",
+        },
+      },
+      res => {
+        let body = ""
+        res.on("data", chunk => (body += chunk))
+        res.on("end", () => {
+          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+            console.error(`  ${pathname} → HTTP ${res.statusCode} ${body.slice(0, 200).replace(/\s+/g, " ")}`)
+            resolve(null)
+            return
+          }
+          try {
+            resolve(JSON.parse(body) as T)
+          } catch {
+            console.error(`  ${pathname} → invalid JSON`)
+            resolve(null)
+          }
+        })
+      },
+    )
+    req.on("error", err => {
+      console.error(`  ${pathname} → ${err.message}`)
+      resolve(null)
+    })
+    req.end()
+  })
+}
 
 interface LegacyNode {
   id: number
@@ -41,19 +88,7 @@ interface LegacyListing {
 }
 
 async function ncList(folderId: number, seeder: string): Promise<LegacyListing | null> {
-  const res = await fetch(`${NC}/apps/skymasonsnav/api/files/${folderId}`, {
-    headers: {
-      "X-Authentik-Username": seeder,
-      "X-Authentik-Groups": "",
-      "Host": "brothers.skymasons.xyz",
-      "Accept": "application/json",
-    },
-  })
-  if (!res.ok) {
-    console.error(`  legacy list ${folderId} → HTTP ${res.status}`)
-    return null
-  }
-  return (await res.json()) as LegacyListing
+  return ncFetch<LegacyListing>(`/apps/skymasonsnav/api/files/${folderId}`, seeder)
 }
 
 async function walk(
