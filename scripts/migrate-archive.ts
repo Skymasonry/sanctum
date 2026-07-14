@@ -40,7 +40,7 @@ interface LegacyListing {
 }
 
 async function ncList(folderId: number, seeder: string): Promise<LegacyListing | null> {
-  const res = await fetch(`${NC}/index.php/apps/skymasonsnav/api/files/${folderId}`, {
+  const res = await fetch(`${NC}/apps/skymasonsnav/api/files/${folderId}`, {
     headers: {
       "X-Authentik-Username": seeder,
       "X-Authentik-Groups": "",
