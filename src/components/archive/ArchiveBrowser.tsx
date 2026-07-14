@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 
 import { Card, CardTitle, ChamberHeader, EmptyState } from "@/components/shared"
-import { formatFileSize, type FileNode } from "@/lib/files"
+import { formatFileSize, type FileNode } from "@/lib/files-shared"
 
 interface ArchiveBrowserProps {
   guildId: string

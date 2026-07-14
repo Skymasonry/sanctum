@@ -9,6 +9,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { db } from "./db"
 import { S3_BUCKET, archiveKey, nextcloudLegacyKey, s3 } from "./s3"
 
+export type { FileNode } from "./files-shared"
+export { formatFileSize } from "./files-shared"
+import type { FileNode } from "./files-shared"
+
 /**
  * Native archive file index.
  *
@@ -16,20 +20,6 @@ import { S3_BUCKET, archiveKey, nextcloudLegacyKey, s3 } from "./s3"
  * live in S3 under `sanctum/archive/{guildId}/{nodeId}`. Root folders
  * for a guild have `parent_id = NULL` and are unique by (guildId, name).
  */
-
-export interface FileNode {
-  id: string
-  guildId: string
-  parentId: string | null
-  name: string
-  isFolder: boolean
-  sizeBytes: number | null
-  mime: string | null
-  storageKey: string | null
-  createdBy: string
-  createdAt: string
-  updatedAt: string
-}
 
 interface FileNodeRow {
   id: string
@@ -268,10 +258,3 @@ export async function importFromLegacyKey(params: {
   return rowToNode(finalised.rows[0])
 }
 
-export function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes || bytes === 0) return ""
-  const k = 1024
-  const sizes = ["B", "KB", "MB", "GB", "TB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
