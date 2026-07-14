@@ -23,7 +23,8 @@
 import { db } from "../src/lib/db"
 import { createFolder, importFromLegacyKey } from "../src/lib/files"
 
-const NC = process.env.NEXTCLOUD_URL ?? "https://cloud.skymasons.xyz"
+const NC = process.env.NEXTCLOUD_URL ?? "https://brothers.skymasons.xyz"
+const NC_WALKER = process.env.NEXTCLOUD_WALKER ?? "admin"
 
 interface LegacyNode {
   id: number
@@ -44,7 +45,8 @@ async function ncList(folderId: number, seeder: string): Promise<LegacyListing |
     headers: {
       "X-Authentik-Username": seeder,
       "X-Authentik-Groups": "",
-      "OCS-APIRequest": "true",
+      "Host": "brothers.skymasons.xyz",
+      "Accept": "application/json",
     },
   })
   if (!res.ok) {
@@ -121,8 +123,8 @@ async function migrateGuild(guildId: string): Promise<void> {
     return
   }
 
-  console.log(`▶  ${row.name} (${row.folder_id}) seeder=${row.seeder_uid}`)
-  const stats = await walk(guildId, null, row.folder_id, row.seeder_uid, row.seeder_uid)
+  console.log(`▶  ${row.name} (${row.folder_id}) walker=${NC_WALKER} createdBy=${row.seeder_uid}`)
+  const stats = await walk(guildId, null, row.folder_id, NC_WALKER, row.seeder_uid)
   console.log(`   done — ${stats.folders} folders, ${stats.files} files\n`)
 }
 
