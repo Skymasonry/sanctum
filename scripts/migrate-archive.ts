@@ -23,12 +23,40 @@
 import http from "node:http"
 import https from "node:https"
 
+import { Pool } from "pg"
+
 import { db } from "../src/lib/db"
 import { createFolder, importFromLegacyKey } from "../src/lib/files"
 
 const NC = process.env.NEXTCLOUD_URL ?? "https://brothers.skymasons.xyz"
 const NC_HOST_HEADER = process.env.NEXTCLOUD_HOST ?? "brothers.skymasons.xyz"
-const NC_WALKER = process.env.NEXTCLOUD_WALKER ?? "admin"
+
+const ncDb = new Pool({
+  host: process.env.SANCTUM_DB_HOST ?? "nextcloud-postgres",
+  port: Number(process.env.SANCTUM_DB_PORT ?? 5432),
+  user: process.env.NEXTCLOUD_DB_USER ?? "nextcloud",
+  password: process.env.NEXTCLOUD_DB_PASSWORD,
+  database: process.env.NEXTCLOUD_DB_NAME ?? "nextcloud",
+  max: 4,
+})
+
+/**
+ * Look up the Nextcloud UID that owns a given file_id via its storage.
+ * Guild folders live under `object::user:{uid}` storages.
+ */
+async function folderOwner(fileId: number): Promise<string | null> {
+  const res = await ncDb.query<{ id: string }>(
+    `SELECT s.id
+       FROM oc_filecache f
+       JOIN oc_storages s ON f.storage = s.numeric_id
+      WHERE f.fileid = $1
+      LIMIT 1`,
+    [fileId],
+  )
+  if (res.rowCount === 0) return null
+  const m = res.rows[0].id.match(/^object::user:(.+)$/)
+  return m ? m[1] : null
+}
 
 function ncFetch<T>(pathname: string, seeder: string): Promise<T | null> {
   const url = new URL(pathname, NC)
@@ -158,8 +186,9 @@ async function migrateGuild(guildId: string): Promise<void> {
     return
   }
 
-  console.log(`▶  ${row.name} (${row.folder_id}) walker=${NC_WALKER} createdBy=${row.seeder_uid}`)
-  const stats = await walk(guildId, null, row.folder_id, NC_WALKER, row.seeder_uid)
+  const walker = (await folderOwner(row.folder_id)) ?? row.seeder_uid
+  console.log(`▶  ${row.name} (${row.folder_id}) walker=${walker} createdBy=${row.seeder_uid}`)
+  const stats = await walk(guildId, null, row.folder_id, walker, row.seeder_uid)
   console.log(`   done — ${stats.folders} folders, ${stats.files} files\n`)
 }
 
@@ -182,6 +211,7 @@ async function main(): Promise<void> {
   }
 
   await db.end()
+  await ncDb.end()
 }
 
 main().catch(err => {
