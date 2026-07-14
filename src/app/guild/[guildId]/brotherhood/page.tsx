@@ -1,4 +1,4 @@
-import { Users, UserPlus, ExternalLink } from "lucide-react"
+import { Users, UserPlus } from "lucide-react"
 import { ChamberHeader, Card, CardTitle } from "@/components/shared"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
@@ -11,12 +11,9 @@ interface BrotherhoodPageProps {
 }
 
 function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolean }) {
-  const profileHref = `https://brothers.skymasons.xyz/apps/contacts/?search=${encodeURIComponent(username)}`
   return (
-    <a
-      href={profileHref}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/profile/${encodeURIComponent(username)}`}
       className="block transition-transform hover:-translate-y-0.5"
     >
       <Card>
@@ -36,7 +33,7 @@ function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolea
           </div>
         </div>
       </Card>
-    </a>
+    </Link>
   )
 }
 
@@ -74,15 +71,6 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
           <UserPlus className="h-4 w-4" />
           Invite Someone
         </Link>
-        <a
-          href="https://brothers.skymasons.xyz/apps/contacts/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-dark px-4 py-2 text-sm text-gray transition-colors hover:border-guild/50 hover:text-guild"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open Contacts
-        </a>
       </div>
 
       <div className="flex-1">
