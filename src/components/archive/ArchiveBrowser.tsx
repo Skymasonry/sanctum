@@ -47,7 +47,7 @@ function FileRow({
     month: "short", day: "numeric", year: "numeric",
   })
   const sizeStr = formatFileSize(node.sizeBytes)
-  const downloadUrl = `/api/files/${node.id}/download`
+  const downloadUrl = `/api/nodes/${node.id}/download`
 
   return (
     <Card>
@@ -201,7 +201,7 @@ export function ArchiveBrowser({ guildId, guildName }: ArchiveBrowserProps) {
     setDeleting(true)
     setActionError(null)
     try {
-      const res = await fetch(`/api/files/${deleteConfirm.id}`, { method: "DELETE" })
+      const res = await fetch(`/api/nodes/${deleteConfirm.id}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
       setDeleteConfirm(null)
       await load()
