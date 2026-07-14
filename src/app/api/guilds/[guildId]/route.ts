@@ -60,45 +60,61 @@ export async function POST(
   const auth = await getAuthHeaders()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { guildId } = await params
+  const username = auth["X-Authentik-Username"]
+
+  const url = new URL(request.url)
+  const action = url.searchParams.get("action")
+  if (!action) {
+    return NextResponse.json({ error: "Action required" }, { status: 400 })
+  }
+
+  const { addMember, applyToGuild, approveApplication, joinGuild, rejectApplication, removeMember } =
+    await import("@/lib/guild-writes")
 
   try {
-    const url = new URL(request.url)
-    const action = url.searchParams.get("action")
-
-    if (!action) {
-      return NextResponse.json({ error: "Action required" }, { status: 400 })
-    }
-
-    let path = ""
-    let body: string | undefined
-
-    if (action === "approve" || action === "reject") {
-      const requestBody = await request.json().catch(() => ({}))
-      const memberId = requestBody.memberId
-      if (!memberId) {
-        return NextResponse.json({ error: "memberId required" }, { status: 400 })
+    switch (action) {
+      case "join": {
+        const ok = await joinGuild(guildId, username, auth)
+        return NextResponse.json({ success: ok })
       }
-      path = `/apps/skymasonsnav/api/orders/${guildId}/members/${memberId}/${action}`
-    } else {
-      switch (action) {
-        case "join":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/join`
-          break
-        case "apply":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/apply`
-          break
-        case "leave":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/leave`
-          break
-        default:
-          return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+      case "leave": {
+        const ok = await removeMember(guildId, username, auth)
+        return NextResponse.json({ success: ok })
       }
+      case "apply": {
+        const body = await request.json().catch(() => ({} as { message?: string; agreements?: Array<{ id: number; text: string; agreed?: boolean }> }))
+        const ok = await applyToGuild(guildId, username, body.message ?? "", body.agreements ?? [])
+        return NextResponse.json({ success: ok })
+      }
+      case "approve":
+      case "reject": {
+        const body = (await request.json().catch(() => ({}))) as { memberId?: string }
+        if (!body.memberId) {
+          return NextResponse.json({ error: "memberId required" }, { status: 400 })
+        }
+        const ok = action === "approve"
+          ? await approveApplication(guildId, body.memberId, auth)
+          : await rejectApplication(guildId, body.memberId)
+        if (action === "approve" && ok) {
+          // approveApplication adds the member itself; addMember not needed
+        } else if (!ok) {
+          return NextResponse.json({ error: "Application not found" }, { status: 404 })
+        }
+        return NextResponse.json({ success: ok })
+      }
+      case "invite": {
+        const body = (await request.json().catch(() => ({}))) as { members?: string[] }
+        const added: string[] = []
+        for (const m of body.members ?? []) {
+          if (await addMember(guildId, m, auth)) added.push(m)
+        }
+        return NextResponse.json({ success: true, added })
+      }
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
-
-    const data = await ncRequest("POST", path, auth, body)
-    return NextResponse.json(data)
   } catch (error) {
-    console.error(`Failed guild action:`, error)
+    console.error("Failed guild action:", error)
     return NextResponse.json({ error: "Action failed" }, { status: 500 })
   }
 }
