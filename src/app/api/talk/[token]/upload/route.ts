@@ -27,13 +27,48 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    const result = await uploadToNextcloud(token, file.name, file.type, buffer, username, groups || "", name || "")
+    // Browsers on mobile sometimes drop the mime type when picking a photo,
+    // sending application/octet-stream. Fall back to extension-based guess
+    // so the "images/audio/video only" gate in the backend doesn't reject
+    // real photos.
+    const mime = file.type && file.type !== "application/octet-stream"
+      ? file.type
+      : guessMimeByExtension(file.name)
+
+    const result = await uploadToNextcloud(token, file.name, mime, buffer, username, groups || "", name || "")
 
     return NextResponse.json(result)
   } catch (error) {
     console.error("Media upload error:", error)
+    if (error instanceof Error) {
+      // Propagate upstream 4xx so the frontend can show a real reason.
+      const m = error.message.match(/^HTTP (\d+): (.+)$/)
+      if (m) {
+        const status = Number(m[1])
+        try {
+          const body = JSON.parse(m[2])
+          return NextResponse.json(body, { status })
+        } catch {
+          return NextResponse.json({ error: m[2] }, { status })
+        }
+      }
+    }
     return NextResponse.json({ error: "Upload failed" }, { status: 500 })
   }
+}
+
+function guessMimeByExtension(filename: string): string {
+  const ext = filename.toLowerCase().split(".").pop() || ""
+  const map: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+    webp: "image/webp", heic: "image/heic", heif: "image/heif", svg: "image/svg+xml",
+    bmp: "image/bmp", tiff: "image/tiff", tif: "image/tiff",
+    mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4",
+    aac: "audio/aac", flac: "audio/flac",
+    mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm",
+    avi: "video/x-msvideo", mkv: "video/x-matroska",
+  }
+  return map[ext] || "application/octet-stream"
 }
 
 function uploadToNextcloud(
