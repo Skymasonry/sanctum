@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef, useTransition } from "react"
+import { useState, useEffect, useRef, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Send, Image, Mic, MicOff, Video, Loader2, AtSign } from "lucide-react"
+import { Send, Image, Mic, MicOff, Video, Loader2, AtSign, X } from "lucide-react"
 import { sendMessage } from "@/app/guild/[guildId]/pulse/actions"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +20,21 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
+
+  // Staged attachment: file picked but not yet sent. Sending happens on
+  // Send-button click so the user can add a caption alongside the file.
+  const [stagedFile, setStagedFile] = useState<File | null>(null)
+  const [stagedPreview, setStagedPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!stagedFile) { setStagedPreview(null); return }
+    if (stagedFile.type.startsWith("image/")) {
+      const url = URL.createObjectURL(stagedFile)
+      setStagedPreview(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setStagedPreview(null)
+  }, [stagedFile])
 
   // @mention state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
@@ -75,17 +90,9 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitMessage() }
   }
 
-  function submitMessage() {
-    if (!message.trim() || isPending) return
-    const current = message
-    setMessage("")
-    setMentionQuery(null)
-    startTransition(async () => { await sendMessage(guildId, token, current) })
-  }
-
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); submitMessage() }
-
-  const uploadFile = async (file: File) => {
+  // Upload a file to the Talk room. Kept for voice recordings which send
+  // straight through without a preview step.
+  const uploadFileImmediate = async (file: File) => {
     setIsUploading(true)
     setError(null)
     try {
@@ -94,30 +101,57 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
       const resp = await fetch(`/api/talk/${token}/upload`, { method: "POST", body: formData })
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({})) as { error?: string }
-        console.error("Upload failed:", err)
         setError(err.error || "Upload failed")
-        return
+        return false
       }
-      // Server action path (text send) refreshes via revalidatePath. This
-      // client fetch has to trigger the RSC re-fetch itself so the new
-      // media message renders without a full reload.
       router.refresh()
-    } catch (err) {
-      console.error("Upload error:", err)
+      return true
+    } catch {
       setError("Upload failed")
+      return false
     } finally {
       setIsUploading(false)
     }
   }
+
+  async function submitMessage() {
+    const text = message.trim()
+    const file = stagedFile
+    if (!text && !file) return
+    if (isPending || isUploading) return
+
+    setMessage("")
+    setMentionQuery(null)
+
+    // File first (if any). Talk doesn't support attaching a caption to
+    // a file share in one message, so the caption goes as a follow-up
+    // text message immediately after.
+    if (file) {
+      const ok = await uploadFileImmediate(file)
+      setStagedFile(null)
+      if (!ok) return
+    }
+
+    if (text) {
+      startTransition(async () => { await sendMessage(guildId, token, text) })
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); submitMessage() }
 
   const handleFileSelect = (accept: string) => {
     const input = accept.startsWith("video") ? videoInputRef.current : fileInputRef.current
     if (input) { input.accept = accept; input.click() }
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File picker stages the file; user hits Send to actually upload.
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) { await uploadFile(file); e.target.value = "" }
+    if (file) {
+      setStagedFile(file)
+      setError(null)
+    }
+    e.target.value = ""
   }
 
   const startRecording = async () => {
@@ -141,7 +175,7 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
         setRecordingDuration(0)
         const blob = new Blob(chunksRef.current, { type: format.type })
         const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")
-        await uploadFile(new File([blob], `voice-${ts}.${format.ext}`, { type: format.type }))
+        await uploadFileImmediate(new File([blob], `voice-${ts}.${format.ext}`, { type: format.type }))
       }
       mediaRecorderRef.current = recorder
       recorder.start()
@@ -206,6 +240,32 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
         </div>
       )}
 
+      {stagedFile && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-guild/30 bg-guild/[0.06] px-3 py-2">
+          {stagedPreview ? (
+            <img src={stagedPreview} alt="" className="h-14 w-14 flex-shrink-0 rounded object-cover" />
+          ) : (
+            <div className="grid h-14 w-14 flex-shrink-0 place-items-center rounded bg-black-light text-guild">
+              <Video className="h-5 w-5" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm text-white">{stagedFile.name}</div>
+            <div className="font-mono text-[10px] text-faint">
+              {Math.round(stagedFile.size / 1024)} KB · attach on send
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStagedFile(null)}
+            className="rounded p-1 text-gray transition hover:bg-black-light hover:text-white"
+            aria-label="Remove attachment"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => handleFileSelect("image/*")} disabled={busy}
@@ -257,7 +317,7 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
           className="flex-1 rounded-lg border border-gray-dark bg-black-light px-4 py-2 text-white placeholder:text-gray transition-colors focus:border-guild focus:outline-none disabled:opacity-50"
         />
 
-        <button type="submit" disabled={busy || !message.trim()}
+        <button type="submit" disabled={busy || (!message.trim() && !stagedFile)}
           className="flex items-center gap-2 rounded-lg bg-guild px-4 py-2 font-medium text-black transition-colors hover:bg-guild/80 disabled:opacity-50">
           <Send className="h-4 w-4" />
           <span className="hidden sm:inline">{isPending ? "Sending..." : "Send"}</span>

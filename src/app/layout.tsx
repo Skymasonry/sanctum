@@ -32,7 +32,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${cinzel.variable} ${cormorant.variable} ${jetbrainsMono.variable}`}>
-      <body className="flex h-screen overflow-hidden">
+      <body className="flex h-dvh overflow-hidden">
         <ServiceWorkerRegistration />
         <Sidebar guilds={guilds} />
         <div className="flex flex-1 flex-col overflow-hidden">
