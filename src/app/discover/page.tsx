@@ -3,7 +3,7 @@ import { Compass } from "lucide-react"
 import { ChamberHeader } from "@/components/shared"
 import { DiscoverSection } from "@/components/home/DiscoverSection"
 import { getUser } from "@/lib/auth"
-import { getGuilds } from "@/lib/guilds"
+import { getAllGuildsUnfiltered } from "@/lib/guilds"
 
 interface DiscoverPageProps {
   searchParams: Promise<{ q?: string }>
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
 
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   const { q } = await searchParams
-  const [user, guilds] = await Promise.all([getUser(), getGuilds()])
+  const [user, guilds] = await Promise.all([getUser(), getAllGuildsUnfiltered()])
 
   if (!user) {
     return (

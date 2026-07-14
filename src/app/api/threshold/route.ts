@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 
 import { fetchFromNextcloud, postToNextcloud } from "@/lib/api"
 import { getEvents } from "@/lib/calendar"
-import { getGuilds } from "@/lib/guilds"
+import { getUserGuilds } from "@/lib/guilds"
 import { getRooms, type TalkRoom } from "@/lib/talk"
 import type { Guild } from "@/types/guild"
 import type {
@@ -38,14 +38,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const shouldTouch = url.searchParams.get("touch") === "1"
 
-  // /api/threshold is a per-user surface. Never return guilds the caller
-  // isn't a member of, even by name — that would leak the existence of
-  // private guilds. Source of truth: orders.json members[].
-  const allGuilds = await getGuilds()
-  const nameLc = username.toLowerCase()
-  const myGuilds = allGuilds.filter(g =>
-    (g.members ?? []).some(m => m.toLowerCase() === nameLc),
-  )
+  // /api/threshold is a per-user surface. getUserGuilds filters to only
+  // guilds the caller is in — this is the canonical source.
+  const myGuilds = await getUserGuilds()
 
   const [rooms, lastSeenResp, gatherings] = await Promise.all([
     getRooms(),
