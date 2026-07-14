@@ -4,6 +4,12 @@ import http from "http"
 
 const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80"
 
+class UpstreamError extends Error {
+  constructor(public status: number, public body: string) {
+    super(`HTTP ${status}: ${body.slice(0, 200)}`)
+  }
+}
+
 function fetchNC(path: string, authHeaders: Record<string, string>): Promise<any> {
   return new Promise((resolve, reject) => {
     const url = new URL(NEXTCLOUD_URL)
@@ -30,7 +36,7 @@ function fetchNC(path: string, authHeaders: Record<string, string>): Promise<any
             reject(new Error("Invalid JSON response"))
           }
         } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${data.slice(0, 200)}`))
+          reject(new UpstreamError(res.statusCode ?? 500, data))
         }
       })
     })
@@ -122,6 +128,12 @@ export async function GET(
     const data = await fetchNC(`/apps/skymasonsnav/api/files/${folderId}`, auth)
     return NextResponse.json(data)
   } catch (error) {
+    if (error instanceof UpstreamError) {
+      return NextResponse.json(
+        { error: "Failed to fetch files" },
+        { status: error.status },
+      )
+    }
     console.error("Failed to fetch files:", error)
     return NextResponse.json({ error: "Failed to fetch files" }, { status: 500 })
   }
