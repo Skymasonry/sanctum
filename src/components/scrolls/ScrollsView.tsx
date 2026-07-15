@@ -21,12 +21,11 @@ interface ScrollListItem {
 interface ScrollsViewProps {
   guildId: string
   initialScrolls: ScrollListItem[]
-  isSeeder: boolean
 }
 
-export function ScrollsView({ guildId, initialScrolls, isSeeder }: ScrollsViewProps) {
+export function ScrollsView({ guildId, initialScrolls }: ScrollsViewProps) {
   const router = useRouter()
-  const [scrolls] = useState<ScrollListItem[]>(initialScrolls)
+  const scrolls = initialScrolls
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -60,18 +59,16 @@ export function ScrollsView({ guildId, initialScrolls, isSeeder }: ScrollsViewPr
 
   return (
     <div className="flex flex-1 flex-col">
-      {isSeeder && (
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() => setShowForm(v => !v)}
-            className="inline-flex items-center gap-2 rounded-lg bg-guild px-4 py-2 text-sm font-medium text-black-deep transition hover:bg-guild/80"
-          >
-            <Plus className="h-4 w-4" />
-            New Scroll
-          </button>
-        </div>
-      )}
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => setShowForm(v => !v)}
+          className="inline-flex items-center gap-2 rounded-lg bg-guild px-4 py-2 text-sm font-medium text-black-deep transition hover:bg-guild/80"
+        >
+          <Plus className="h-4 w-4" />
+          New Scroll
+        </button>
+      </div>
 
       {showForm && (
         <form onSubmit={submit} className="mb-6 rounded-lg border border-gray-dark p-4">
@@ -124,7 +121,7 @@ export function ScrollsView({ guildId, initialScrolls, isSeeder }: ScrollsViewPr
             <ClipboardList className="mx-auto mb-3 h-8 w-8 text-gray" />
             <p className="font-display text-lg tracking-[0.03em] text-gray">No scrolls yet</p>
             <p className="mt-2 max-w-md text-sm text-faint">
-              {isSeeder ? "Create the first one." : "Nothing to fill out yet."}
+              Create the first one.
             </p>
           </div>
         </div>

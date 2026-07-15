@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Target, Clock, Plus } from "lucide-react"
+import { Target, Clock, Plus, Check, MoveRight, Trash2, MoreVertical } from "lucide-react"
 
 import { ChamberHeader, Card, CardTitle } from "@/components/shared"
-import type { Quest, QuestBoard as QuestBoardShape } from "@/lib/quests"
+import type { Quest, QuestBoard as QuestBoardShape, QuestStack } from "@/lib/quests"
 
 interface QuestBoardProps {
   guildId: string
@@ -13,27 +13,121 @@ interface QuestBoardProps {
   initialBoard: QuestBoardShape
 }
 
-function QuestCard({ quest }: { quest: Quest }) {
+function QuestCard({
+  quest,
+  stackId,
+  allStacks,
+  onChange,
+}: {
+  quest: Quest
+  stackId: string
+  allStacks: QuestStack[]
+  onChange: () => void
+}) {
   const dueDate = quest.dueAt ? new Date(quest.dueAt) : null
   const isOverdue = dueDate && dueDate < new Date() && !quest.completedAt
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+
+  async function patch(body: Record<string, unknown>) {
+    setPending(true)
+    try {
+      await fetch(`/api/quests/${quest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      onChange()
+    } finally {
+      setPending(false)
+      setOpen(false)
+    }
+  }
+
+  async function remove() {
+    setPending(true)
+    try {
+      await fetch(`/api/quests/${quest.id}`, { method: "DELETE" })
+      onChange()
+    } finally {
+      setPending(false)
+      setOpen(false)
+    }
+  }
 
   return (
     <Card>
-      <CardTitle>{quest.title}</CardTitle>
-      {quest.description && (
-        <p className="mt-2 line-clamp-2 text-sm text-gray">{quest.description}</p>
-      )}
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        {dueDate && (
-          <span
-            className={`flex items-center gap-1 text-xs ${
-              isOverdue ? "text-danger" : "text-gray"
-            }`}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <CardTitle className={quest.completedAt ? "line-through decoration-gray/50" : ""}>
+            {quest.title}
+          </CardTitle>
+          {quest.description && (
+            <p className="mt-2 line-clamp-2 text-sm text-gray">{quest.description}</p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {dueDate && (
+              <span
+                className={`flex items-center gap-1 text-xs ${
+                  isOverdue ? "text-danger" : "text-gray"
+                }`}
+              >
+                <Clock className="h-3 w-3" />
+                {dueDate.toLocaleDateString("en-AU", { month: "short", day: "numeric" })}
+              </span>
+            )}
+            {quest.completedAt && (
+              <span className="text-xs text-success">✓ complete</span>
+            )}
+          </div>
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            disabled={pending}
+            className="flex h-7 w-7 items-center justify-center rounded text-gray hover:bg-white/10 hover:text-white disabled:opacity-50"
+            title="Actions"
           >
-            <Clock className="h-3 w-3" />
-            {dueDate.toLocaleDateString("en-AU", { month: "short", day: "numeric" })}
-          </span>
-        )}
+            <MoreVertical className="h-4 w-4" />
+          </button>
+          {open && (
+            <div className="absolute right-0 top-8 z-10 min-w-[180px] rounded-lg border border-gray-dark bg-black-light py-1 shadow-xl">
+              <button
+                type="button"
+                onClick={() => patch({ completedAt: quest.completedAt ? null : new Date().toISOString() })}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-light hover:bg-white/5 hover:text-success"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {quest.completedAt ? "Mark incomplete" : "Mark complete"}
+              </button>
+              <div className="my-1 h-px bg-gray-dark" />
+              <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-faint">Move to</div>
+              {allStacks
+                .filter(s => s.id !== stackId)
+                .map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => patch({ stackId: s.id, position: (s.quests.length ?? 0) })}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-light hover:bg-white/5 hover:text-guild"
+                  >
+                    <MoveRight className="h-3.5 w-3.5" />
+                    {s.title}
+                  </button>
+                ))}
+              <div className="my-1 h-px bg-gray-dark" />
+              <button
+                type="button"
+                onClick={remove}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-light hover:bg-white/5 hover:text-danger"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </Card>
   )
@@ -41,7 +135,9 @@ function QuestCard({ quest }: { quest: Quest }) {
 
 export function QuestBoard({ guildId, guildName, initialBoard }: QuestBoardProps) {
   const router = useRouter()
-  const [board] = useState<QuestBoardShape>(initialBoard)
+  // Use the prop directly — server component provides fresh data on refresh().
+  // useState(initialX) captures once and never updates.
+  const board = initialBoard
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -193,7 +289,15 @@ export function QuestBoard({ guildId, guildName, initialBoard }: QuestBoardProps
                     Nothing here
                   </p>
                 ) : (
-                  stack.quests.map(q => <QuestCard key={q.id} quest={q} />)
+                  stack.quests.map(q => (
+                    <QuestCard
+                      key={q.id}
+                      quest={q}
+                      stackId={stack.id}
+                      allStacks={board.stacks}
+                      onChange={() => router.refresh()}
+                    />
+                  ))
                 )}
               </div>
             </div>

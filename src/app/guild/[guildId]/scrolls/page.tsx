@@ -3,7 +3,6 @@ import { FileText } from "lucide-react"
 
 import { ChamberHeader } from "@/components/shared"
 import { ScrollsView } from "@/components/scrolls/ScrollsView"
-import { getUser } from "@/lib/auth"
 import { getGuild } from "@/lib/guilds"
 import { listScrollsForGuild } from "@/lib/scrolls"
 
@@ -14,7 +13,6 @@ interface ScrollsPageProps {
 export default async function ScrollsPage({ params }: ScrollsPageProps) {
   const { guildId } = await params
   const guild = await getGuild(guildId)
-  const user = await getUser()
   if (!guild) notFound()
 
   const scrolls = await listScrollsForGuild(guildId)
@@ -30,7 +28,6 @@ export default async function ScrollsPage({ params }: ScrollsPageProps) {
       <ScrollsView
         guildId={guildId}
         initialScrolls={scrolls}
-        isSeeder={user?.username === guild.seederUid}
       />
     </div>
   )
