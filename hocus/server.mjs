@@ -11,7 +11,7 @@
  *   SANCTUM_DB_HOST/PORT/USER/PASSWORD/NAME  — shared with Neo
  *   SANCTUM_WS_SECRET          — HMAC secret for token verification
  */
-import { Server } from "@hocuspocus/server"
+import { Hocuspocus } from "@hocuspocus/server"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import pg from "pg"
 import * as Y from "yjs"
@@ -58,7 +58,7 @@ function verifyToken(token) {
   }
 }
 
-const server = new Server({
+const server = new Hocuspocus({
   port: PORT,
   address: "0.0.0.0",
 
