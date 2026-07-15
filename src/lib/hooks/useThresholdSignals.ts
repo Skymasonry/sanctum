@@ -29,7 +29,9 @@ export function useThresholdSignals(intervalMs = 30_000): Map<string, GuildSigna
         const next = new Map<string, GuildSignal>()
         for (const g of data.stirring) {
           next.set(g.guildId, {
-            hasUnread: g.unreadMessages + g.newFiles + g.eventChanges > 0,
+            hasUnread:
+              g.unreadMessages + g.newFiles + g.eventChanges + g.openQuests + g.pendingScrolls >
+              0,
             isLive: g.presentNow > 0,
           })
         }

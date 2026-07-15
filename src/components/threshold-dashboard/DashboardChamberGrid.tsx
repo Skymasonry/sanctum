@@ -54,10 +54,10 @@ const CHAMBERS: ChamberDef[] = [
     id: "quests",
     icon: Target,
     title: "Quests",
-    description: "Assigned or overdue",
-    countOf: () => 0, // aggregate not yet on /api/threshold
+    description: "Overdue or due this week",
+    countOf: g => g.openQuests,
     chamberPath: "quests",
-    emptyLine: "Cross-guild quest signal coming soon",
+    emptyLine: "Nothing due this week",
   },
   {
     id: "archive",
@@ -73,7 +73,7 @@ const CHAMBERS: ChamberDef[] = [
     icon: FileText,
     title: "Scrolls",
     description: "Surveys awaiting your response",
-    countOf: () => 0,
+    countOf: g => g.pendingScrolls,
     chamberPath: "scrolls",
     emptyLine: "No pending scrolls",
   },

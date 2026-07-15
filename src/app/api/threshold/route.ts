@@ -5,6 +5,10 @@ import { fetchFromNextcloud, postToNextcloud } from "@/lib/api"
 import { getEvents } from "@/lib/calendar"
 import { getUserGuilds } from "@/lib/guilds"
 import { getRooms, type TalkRoom } from "@/lib/talk"
+import {
+  openQuestCountsByGuild,
+  pendingScrollCountsByGuild,
+} from "@/lib/threshold-aggregates"
 import type { Guild } from "@/types/guild"
 import type {
   Gathering,
@@ -42,11 +46,15 @@ export async function GET(request: Request) {
   // guilds the caller is in — this is the canonical source.
   const myGuilds = await getUserGuilds()
 
-  const [rooms, lastSeenResp, gatherings] = await Promise.all([
-    getRooms(),
-    shouldTouch ? touchLastSeen(authHeaders) : readLastSeen(authHeaders),
-    collectGatherings(myGuilds),
-  ])
+  const guildIds = myGuilds.map(g => g.id)
+  const [rooms, lastSeenResp, gatherings, questCounts, scrollCounts] =
+    await Promise.all([
+      getRooms(),
+      shouldTouch ? touchLastSeen(authHeaders) : readLastSeen(authHeaders),
+      collectGatherings(myGuilds),
+      openQuestCountsByGuild(guildIds),
+      pendingScrollCountsByGuild(guildIds, username),
+    ])
 
   const roomsByToken = new Map<string, TalkRoom>()
   for (const r of rooms) roomsByToken.set(r.token, r)
@@ -65,13 +73,18 @@ export async function GET(request: Request) {
       newFiles: 0,
       eventChanges: 0,
       presentNow: 0,
+      openQuests: questCounts.get(g.id) ?? 0,
+      pendingScrolls: scrollCounts.get(g.id) ?? 0,
     }
   })
 
   // Sort by activity: active (has any signal) first, most recent first
+  const totalSignal = (g: StirringGuild) =>
+    g.unreadMessages + g.newFiles + g.eventChanges + g.presentNow +
+    g.openQuests + g.pendingScrolls
   stirring.sort((a, b) => {
-    const aActive = a.unreadMessages + a.newFiles + a.eventChanges + a.presentNow > 0
-    const bActive = b.unreadMessages + b.newFiles + b.eventChanges + b.presentNow > 0
+    const aActive = totalSignal(a) > 0
+    const bActive = totalSignal(b) > 0
     if (aActive !== bActive) return aActive ? -1 : 1
     const aT = a.lastActivity ? Date.parse(a.lastActivity) : 0
     const bT = b.lastActivity ? Date.parse(b.lastActivity) : 0
