@@ -8,10 +8,11 @@ const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80
  * POST /api/talk/{token}/read
  *   { lastReadMessage: number }
  *
- * Marks the Talk room as read at the given message id by proxying to
- * Nextcloud's Spreed OCS API. This is what actually decrements the
- * unreadMessages counter that surfaces in the sidebar / dashboard /
- * chamber-card badges.
+ * Marks the Talk room as read up to the given message id by calling
+ * the skymasonsnav PHP endpoint (which trusts the X-Authentik-Username
+ * header and updates the attendee row in-process). Nextcloud's own
+ * OCS chat/read endpoint refuses forward-auth headers, so we can't
+ * hit it directly.
  */
 export async function POST(
   request: NextRequest,
@@ -36,13 +37,12 @@ export async function POST(
       {
         hostname: url.hostname,
         port: Number(url.port) || 80,
-        path: `/ocs/v2.php/apps/spreed/api/v1/chat/${encodeURIComponent(token)}/read`,
+        path: `/apps/skymasonsnav/api/talk/rooms/${encodeURIComponent(token)}/read`,
         method: "POST",
         headers: {
           "Host": "brothers.skymasons.xyz",
           "Content-Type": "application/json",
           "Content-Length": payload.length,
-          "OCS-APIRequest": "true",
           "Accept": "application/json",
           "X-Authentik-Username": username,
           "X-Authentik-Groups": h.get("x-authentik-groups") ?? "",
