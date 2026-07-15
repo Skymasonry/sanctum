@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 import type { Guild } from "@/types/guild"
 import { GuildDetailsModal } from "./GuildDetailsModal"
 
@@ -75,11 +76,7 @@ export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, un
         className="mb-3 text-5xl drop-shadow-lg"
         style={{ color: guildColor }}
       >
-        {guild.icon?.startsWith("data:") ? (
-          <img src={guild.icon} alt="" className="h-12 w-12 object-contain drop-shadow-lg" />
-        ) : (
-          guild.icon || "⬡"
-        )}
+        <GuildIcon icon={guild.icon} className="h-12 w-12 object-contain drop-shadow-lg" />
       </div>
 
       {/* Name */}

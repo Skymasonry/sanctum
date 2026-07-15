@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ChevronRight, Lock } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 import type { Guild } from "@/types/guild"
 
 interface GuildListRowProps {
@@ -16,10 +17,8 @@ export function GuildListRow({ guild, username: _username, isMember }: GuildList
 
   const inner = (
     <div className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-black-light">
-      <div className="shrink-0 text-xl" style={{ color }}>
-        {guild.icon?.startsWith("data:") ? (
-          <img src={guild.icon} alt="" className="h-6 w-6 object-contain" />
-        ) : guild.icon || "⬡"}
+      <div className="shrink-0 text-xl">
+        <GuildIcon icon={guild.icon} color={color} className="h-6 w-6 object-contain" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{guild.name}</p>

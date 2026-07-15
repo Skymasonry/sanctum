@@ -46,3 +46,19 @@ export function archiveKey(guildId: string, fileNodeId: string): string {
 export function nextcloudLegacyKey(fileId: number | string): string {
   return `urn:oid:${fileId}`
 }
+
+/**
+ * Public URL for an object in the shared bucket. Assumes the object
+ * was uploaded with ACL: "public-read". Used for guild icons which
+ * need to render without a member session (Discover page, invite
+ * previews, etc.).
+ */
+export function publicObjectUrl(key: string): string {
+  const endpoint = process.env.SANCTUM_S3_ENDPOINT ?? "https://syd1.digitaloceanspaces.com"
+  const clean = endpoint.replace(/^https?:\/\//, "").replace(/\/$/, "")
+  return `https://${S3_BUCKET}.${clean}/${key}`
+}
+
+export function guildIconKey(iconId: string, ext = "png"): string {
+  return `sanctum/guild-icons/${iconId}.${ext}`
+}

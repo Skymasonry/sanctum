@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
 import { Compass, Plus } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 import { cn } from "@/lib/utils"
 import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
 import type { Guild } from "@/types/guild"
@@ -186,7 +187,7 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
-        <span style={{ color: guild.color }}>{guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-5 w-5 object-contain" /> : guild.icon}</span>
+        <GuildIcon icon={guild.icon} color={guild.color} className="h-5 w-5 object-contain" />
 
         {signal?.isLive ? (
           <span
