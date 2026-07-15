@@ -137,10 +137,10 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
   }, [provider])
 
   const btn = (active: boolean) =>
-    `flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs transition-colors ` +
+    `flex h-10 min-w-10 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors ` +
     (active
-      ? "bg-guild/20 text-guild"
-      : "text-gray hover:bg-white/5 hover:text-white")
+      ? "border-guild bg-guild/25 text-guild"
+      : "border-gray-dark bg-white/5 text-gray-light hover:border-guild/50 hover:bg-white/10 hover:text-white")
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -150,15 +150,15 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
           <button className={btn(editor?.isActive("bold") ?? false)} onClick={() => editor?.chain().focus().toggleBold().run()} title="Bold"><strong>B</strong></button>
           <button className={btn(editor?.isActive("italic") ?? false)} onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italic"><em>I</em></button>
           <button className={btn(editor?.isActive("strike") ?? false)} onClick={() => editor?.chain().focus().toggleStrike().run()} title="Strike"><s>S</s></button>
-          <span className="mx-2 h-4 w-px bg-gray-dark" />
+          <span className="mx-1 h-6 w-px bg-gray-dark" />
           <button className={btn(editor?.isActive("heading", { level: 1 }) ?? false)} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
           <button className={btn(editor?.isActive("heading", { level: 2 }) ?? false)} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-          <span className="mx-2 h-4 w-px bg-gray-dark" />
+          <span className="mx-1 h-6 w-px bg-gray-dark" />
           <button className={btn(editor?.isActive("bulletList") ?? false)} onClick={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet list">•</button>
           <button className={btn(editor?.isActive("orderedList") ?? false)} onClick={() => editor?.chain().focus().toggleOrderedList().run()} title="Ordered list">1.</button>
           <button className={btn(editor?.isActive("blockquote") ?? false)} onClick={() => editor?.chain().focus().toggleBlockquote().run()} title="Quote">&ldquo;</button>
           <button className={btn(editor?.isActive("codeBlock") ?? false)} onClick={() => editor?.chain().focus().toggleCodeBlock().run()} title="Code">{"</>"}</button>
-          <span className="mx-2 h-4 w-px bg-gray-dark" />
+          <span className="mx-1 h-6 w-px bg-gray-dark" />
           <select
             defaultValue=""
             onChange={e => {
@@ -167,14 +167,15 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
               else editor?.chain().focus().setFontSize(v).run()
               e.target.value = ""
             }}
-            className="h-8 rounded bg-transparent px-1 text-xs text-gray hover:text-white focus:outline-none"
+            style={{ colorScheme: "dark" }}
+            className="h-10 rounded-md border border-gray-dark bg-white/5 px-3 text-sm font-medium text-gray-light hover:border-guild/50 hover:bg-white/10 hover:text-white focus:outline-none"
             title="Font size"
           >
-            <option value="">Size</option>
+            <option value="" className="bg-black-light text-gray-light">Size</option>
             {FONT_SIZES.map(s => (
-              <option key={s} value={s}>{s.replace("px", "")}</option>
+              <option key={s} value={s} className="bg-black-light text-gray-light">{s.replace("px", "")}</option>
             ))}
-            <option value="__unset">Reset</option>
+            <option value="__unset" className="bg-black-light text-gray-light">Reset</option>
           </select>
         </div>
         <div className="flex items-center gap-2 text-xs">
