@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
+import { Compass, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
 import type { Guild } from "@/types/guild"
@@ -99,28 +100,28 @@ export function Sidebar({ guilds }: SidebarProps) {
           ))}
         </LayoutGroup>
         <Link
-          href="/discover"
-          className={cn(
-            "mt-1 flex h-10 w-10 items-center justify-center rounded-xl text-lg text-faint transition-all duration-150",
-            "hover:scale-110 hover:bg-black-light hover:text-gold",
-            pathname === "/discover" && "bg-black-light text-gold",
-          )}
-          title="Discover guilds"
-          aria-label="Discover guilds"
-        >
-          +
-        </Link>
-        <Link
           href="/create-guild"
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl text-xl text-faint transition-all duration-150",
-            "hover:scale-110 hover:bg-black-light hover:text-guild",
-            pathname === "/create-guild" && "bg-black-light text-guild",
+            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl border-2 border-dashed border-gray transition-all duration-150",
+            "text-gray-light hover:scale-110 hover:border-guild hover:bg-guild/10 hover:text-guild",
+            pathname === "/create-guild" && "border-guild bg-guild/10 text-guild",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
         >
-          ✧
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
+        </Link>
+        <Link
+          href="/discover"
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-xl border-2 border-dashed border-gray transition-all duration-150",
+            "text-gray-light hover:scale-110 hover:border-gold hover:bg-gold/10 hover:text-gold",
+            pathname === "/discover" && "border-gold bg-gold/10 text-gold",
+          )}
+          title="Discover guilds"
+          aria-label="Discover guilds"
+        >
+          <Compass className="h-5 w-5" strokeWidth={2.5} />
         </Link>
       </nav>
 

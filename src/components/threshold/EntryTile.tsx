@@ -27,7 +27,7 @@ export function EntryTile({ href, icon: Icon, title, description, badge, externa
       )}
     >
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-black-deep bg-guild px-1.5 text-[11px] font-bold leading-none text-black-deep shadow-lg">
+        <span className="absolute -right-2.5 -top-2.5 flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-black-deep bg-guild px-2 text-sm font-bold leading-none text-black-deep shadow-lg">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
