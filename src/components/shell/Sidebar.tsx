@@ -102,9 +102,9 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-guild/15 text-guild/80 transition-all duration-150",
-            "hover:scale-110 hover:bg-guild/25 hover:text-guild",
-            pathname === "/create-guild" && "bg-guild/25 text-guild",
+            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-ember/15 text-ember/80 transition-all duration-150",
+            "hover:scale-110 hover:bg-ember/25 hover:text-ember",
+            pathname === "/create-guild" && "bg-ember/25 text-ember",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
