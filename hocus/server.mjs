@@ -62,15 +62,35 @@ const server = new Hocuspocus({
   port: PORT,
   address: "0.0.0.0",
 
+  async onConnect(data) {
+    console.log(`[connect] doc=${data.documentName} request=${data.request?.url}`)
+  },
+
+  async onDisconnect(data) {
+    console.log(`[disconnect] doc=${data.documentName}`)
+  },
+
   async onAuthenticate({ documentName, token }) {
+    console.log(`[auth] doc=${documentName} tokenLen=${token?.length ?? 0}`)
     const payload = verifyToken(token ?? "")
-    if (!payload || payload.nodeId !== documentName || !payload.userId) {
+    if (!payload) {
+      console.log(`[auth-fail] doc=${documentName} — bad signature or expired`)
       throw new Error("Unauthorized")
     }
+    if (payload.nodeId !== documentName) {
+      console.log(`[auth-fail] doc=${documentName} — nodeId=${payload.nodeId} mismatch`)
+      throw new Error("Unauthorized")
+    }
+    if (!payload.userId) {
+      console.log(`[auth-fail] doc=${documentName} — no userId`)
+      throw new Error("Unauthorized")
+    }
+    console.log(`[auth-ok] doc=${documentName} user=${payload.userId}`)
     return { user: { id: payload.userId }, guildId: payload.guildId ?? null }
   },
 
   async onLoadDocument({ documentName }) {
+    console.log(`[load] doc=${documentName}`)
     const res = await pool.query(
       "SELECT y_state FROM doc_states WHERE file_node_id = $1",
       [documentName],
