@@ -26,14 +26,14 @@ export function EntryTile({ href, icon: Icon, title, description, badge, externa
         "hover:-translate-y-0.5 hover:border-guild/50"
       )}
     >
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-black-deep bg-guild px-1.5 text-[11px] font-bold leading-none text-black-deep shadow-lg">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
       <div className="flex items-center gap-3">
-        <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-guild/10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-guild/10">
           <Icon className="h-4 w-4 text-guild" />
-          {badge !== undefined && badge > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-guild px-1 text-[10px] font-bold leading-none text-black-deep">
-              {badge > 99 ? "99+" : badge}
-            </span>
-          )}
         </div>
         <span className="font-display text-sm font-medium tracking-wide text-white transition-colors group-hover:text-guild">
           {title}

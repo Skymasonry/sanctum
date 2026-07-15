@@ -53,7 +53,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
       />
 
       <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-dark bg-black">
-        <MessageList messages={messages} currentUser={user?.username} />
+        <MessageList messages={messages} currentUser={user?.username} token={token} />
         <ChatInput guildId={guildId} token={token} members={guild.members} />
       </div>
     </div>
