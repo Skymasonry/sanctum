@@ -60,7 +60,7 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ history: false }),
+      StarterKit.configure({ history: false, gapcursor: false }),
       Collaboration.configure({ document: ydoc }),
       ...(provider
         ? [
@@ -74,38 +74,61 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
     editorProps: {
       attributes: {
         class:
-          "prose prose-invert max-w-none focus:outline-none min-h-[60vh] p-6 [&_.collaboration-cursor__caret]:relative [&_.collaboration-cursor__caret]:border-l-2 [&_.collaboration-cursor__label]:absolute [&_.collaboration-cursor__label]:-top-5 [&_.collaboration-cursor__label]:left-0 [&_.collaboration-cursor__label]:whitespace-nowrap [&_.collaboration-cursor__label]:rounded [&_.collaboration-cursor__label]:px-1 [&_.collaboration-cursor__label]:text-[10px] [&_.collaboration-cursor__label]:font-medium [&_.collaboration-cursor__label]:text-black",
+          "prose prose-invert max-w-none focus:outline-none min-h-full px-8 py-6 " +
+          "[&_p]:my-3 [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:mt-5 [&_h2]:mb-2 " +
+          "[&_.collaboration-cursor__caret]:relative [&_.collaboration-cursor__caret]:border-l-2 " +
+          "[&_.collaboration-cursor__label]:absolute [&_.collaboration-cursor__label]:-top-5 " +
+          "[&_.collaboration-cursor__label]:left-0 [&_.collaboration-cursor__label]:whitespace-nowrap " +
+          "[&_.collaboration-cursor__label]:rounded [&_.collaboration-cursor__label]:px-1 " +
+          "[&_.collaboration-cursor__label]:text-[10px] [&_.collaboration-cursor__label]:font-medium " +
+          "[&_.collaboration-cursor__label]:text-black",
       },
     },
     immediatelyRender: false,
   }, [provider])
 
+  const btn = (active: boolean) =>
+    `flex h-8 min-w-8 items-center justify-center rounded px-2 text-xs transition-colors ` +
+    (active
+      ? "bg-guild/20 text-guild"
+      : "text-gray hover:bg-white/5 hover:text-white")
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="mb-2 flex items-center gap-2 text-xs">
-        <span
-          className={`h-2 w-2 rounded-full ${
-            authError
-              ? "bg-danger"
-              : synced
-              ? "bg-success"
-              : status === "connected"
-              ? "bg-gold"
-              : "bg-gold animate-pulse"
-          }`}
-        />
-        <span className="text-gray">
-          {authError
-            ? `auth: ${authError}`
-            : synced
-            ? "saved"
-            : status === "connected"
-            ? "syncing"
-            : status}
-        </span>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Toolbar */}
+      <div className="mb-3 flex items-center justify-between gap-3 border-b border-gray-dark pb-3">
+        <div className="flex items-center gap-1">
+          <button className={btn(editor?.isActive("bold") ?? false)} onClick={() => editor?.chain().focus().toggleBold().run()} title="Bold"><strong>B</strong></button>
+          <button className={btn(editor?.isActive("italic") ?? false)} onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italic"><em>I</em></button>
+          <button className={btn(editor?.isActive("strike") ?? false)} onClick={() => editor?.chain().focus().toggleStrike().run()} title="Strike"><s>S</s></button>
+          <span className="mx-2 h-4 w-px bg-gray-dark" />
+          <button className={btn(editor?.isActive("heading", { level: 1 }) ?? false)} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
+          <button className={btn(editor?.isActive("heading", { level: 2 }) ?? false)} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
+          <span className="mx-2 h-4 w-px bg-gray-dark" />
+          <button className={btn(editor?.isActive("bulletList") ?? false)} onClick={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet list">•</button>
+          <button className={btn(editor?.isActive("orderedList") ?? false)} onClick={() => editor?.chain().focus().toggleOrderedList().run()} title="Ordered list">1.</button>
+          <button className={btn(editor?.isActive("blockquote") ?? false)} onClick={() => editor?.chain().focus().toggleBlockquote().run()} title="Quote">&ldquo;</button>
+          <button className={btn(editor?.isActive("codeBlock") ?? false)} onClick={() => editor?.chain().focus().toggleCodeBlock().run()} title="Code">{"</>"}</button>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              authError ? "bg-danger" : synced ? "bg-success"
+              : status === "connected" ? "bg-gold" : "bg-gold animate-pulse"
+            }`}
+          />
+          <span className="text-gray">
+            {authError ? `auth: ${authError}` : synced ? "saved"
+             : status === "connected" ? "syncing" : status}
+          </span>
+        </div>
       </div>
-      <div className="flex-1 overflow-auto rounded-lg border border-gray-dark bg-black-deep">
-        <EditorContent editor={editor} />
+
+      {/* Editor scroll region */}
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-dark bg-black-deep">
+        <div className="mx-auto max-w-3xl">
+          <EditorContent editor={editor} />
+        </div>
       </div>
     </div>
   )
