@@ -12,7 +12,7 @@
     "@auth/core": "^0.41.0",
     "@aws-sdk/client-s3": "^3.1086.0",
     "@aws-sdk/s3-request-presigner": "^3.1086.0",
-    "@hocuspocus/provider": "^4.4.0",
+    "@hocuspocus/provider": "^2.15.3",
     "@tiptap/extension-collaboration": "^2.27.2",
     "@tiptap/extension-collaboration-cursor": "^2.26.2",
     "@tiptap/react": "^2.27.2",
