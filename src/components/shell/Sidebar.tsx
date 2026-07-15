@@ -102,9 +102,9 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl border-2 border-dashed border-gray transition-all duration-150",
-            "text-gray-light hover:scale-110 hover:border-guild hover:bg-guild/10 hover:text-guild",
-            pathname === "/create-guild" && "border-guild bg-guild/10 text-guild",
+            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-guild/15 text-guild/80 transition-all duration-150",
+            "hover:scale-110 hover:bg-guild/25 hover:text-guild",
+            pathname === "/create-guild" && "bg-guild/25 text-guild",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
@@ -114,9 +114,9 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/discover"
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl border-2 border-dashed border-gray transition-all duration-150",
-            "text-gray-light hover:scale-110 hover:border-gold hover:bg-gold/10 hover:text-gold",
-            pathname === "/discover" && "border-gold bg-gold/10 text-gold",
+            "flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15 text-gold/80 transition-all duration-150",
+            "hover:scale-110 hover:bg-gold/25 hover:text-gold",
+            pathname === "/discover" && "bg-gold/25 text-gold",
           )}
           title="Discover guilds"
           aria-label="Discover guilds"
