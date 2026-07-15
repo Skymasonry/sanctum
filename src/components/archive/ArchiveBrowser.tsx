@@ -1,14 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import {
   Archive, ChevronLeft, Download, FileSpreadsheet, FileText, Film,
   Folder, FolderPlus, Image, MoreVertical, Music, Presentation,
-  Trash2, Upload, X, Check,
+  Sparkles, Trash2, Upload, X, Check,
 } from "lucide-react"
 
 import { Card, CardTitle, ChamberHeader, EmptyState } from "@/components/shared"
-import { formatFileSize, type FileNode } from "@/lib/files-shared"
+import { formatFileSize, isDocNode, type FileNode } from "@/lib/files-shared"
 
 interface ArchiveBrowserProps {
   guildId: string
@@ -24,6 +25,7 @@ const ROOT_CRUMB: Crumb = { id: null, name: "Archive" }
 
 function fileIcon(node: FileNode) {
   if (node.isFolder) return <Folder className="h-5 w-5 text-guild" />
+  if (isDocNode(node)) return <Sparkles className="h-5 w-5 text-gold" />
   const mime = node.mime ?? ""
   if (mime.startsWith("image/")) return <Image className="h-5 w-5 text-gray" />
   if (mime.startsWith("video/")) return <Film className="h-5 w-5 text-gray" />
@@ -35,10 +37,12 @@ function fileIcon(node: FileNode) {
 
 function FileRow({
   node,
+  guildId,
   onFolderClick,
   onDelete,
 }: {
   node: FileNode
+  guildId: string
   onFolderClick: (n: FileNode) => void
   onDelete: (n: FileNode) => void
 }) {
@@ -48,34 +52,55 @@ function FileRow({
   })
   const sizeStr = formatFileSize(node.sizeBytes)
   const downloadUrl = `/api/nodes/${node.id}/download`
+  const isDoc = isDocNode(node)
+  const docHref = `/guild/${guildId}/archive/doc/${node.id}`
+
+  const IconWrap = ({ children }: { children: React.ReactNode }) =>
+    node.isFolder ? (
+      <button
+        onClick={() => onFolderClick(node)}
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-guild/10"
+      >
+        {children}
+      </button>
+    ) : isDoc ? (
+      <Link
+        href={docHref}
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10"
+      >
+        {children}
+      </Link>
+    ) : (
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5">
+        {children}
+      </div>
+    )
+
+  const nameEl = isDoc ? (
+    <Link href={docHref} className="hover:text-gold">
+      <CardTitle className="truncate">{node.name}</CardTitle>
+    </Link>
+  ) : (
+    <CardTitle className="truncate">{node.name}</CardTitle>
+  )
 
   return (
     <Card>
       <div className="flex items-center gap-4">
-        {node.isFolder ? (
-          <button
-            onClick={() => onFolderClick(node)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-guild/10"
-          >
-            {fileIcon(node)}
-          </button>
-        ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5">
-            {fileIcon(node)}
-          </div>
-        )}
+        <IconWrap>{fileIcon(node)}</IconWrap>
         <div
           className={`min-w-0 flex-1 ${node.isFolder ? "cursor-pointer" : ""}`}
           onClick={node.isFolder ? () => onFolderClick(node) : undefined}
         >
-          <CardTitle className="truncate">{node.name}</CardTitle>
+          {nameEl}
           <div className="mt-1 flex items-center gap-3 text-xs text-gray">
             <span>{modified}</span>
             {sizeStr && <span>{sizeStr}</span>}
+            {isDoc && <span className="text-gold/70">live doc</span>}
           </div>
         </div>
         <div className="relative flex items-center gap-1">
-          {!node.isFolder && (
+          {!node.isFolder && !isDoc && (
             <>
               {node.mime?.startsWith("image/") && (
                 <a
@@ -130,6 +155,9 @@ export function ArchiveBrowser({ guildId, guildName }: ArchiveBrowserProps) {
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [showNewDoc, setShowNewDoc] = useState(false)
+  const [newDocTitle, setNewDocTitle] = useState("")
+  const [creatingDoc, setCreatingDoc] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<FileNode | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -196,6 +224,31 @@ export function ArchiveBrowser({ guildId, guildName }: ArchiveBrowserProps) {
     }
   }
 
+  const handleCreateDoc = async () => {
+    const title = newDocTitle.trim()
+    if (!title) return
+    setCreatingDoc(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docTitle: title, parentId: currentId }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to create doc")
+      }
+      setNewDocTitle("")
+      setShowNewDoc(false)
+      await load()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to create doc")
+    } finally {
+      setCreatingDoc(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteConfirm) return
     setDeleting(true)
@@ -242,8 +295,45 @@ export function ArchiveBrowser({ guildId, guildName }: ArchiveBrowserProps) {
           <FolderPlus className="h-4 w-4" />
           New Folder
         </button>
+        <button
+          onClick={() => { setShowNewDoc(v => !v); setNewDocTitle("") }}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-dark px-4 py-2 text-sm text-gray transition-colors hover:border-gold/50 hover:text-gold"
+        >
+          <Sparkles className="h-4 w-4" />
+          New Document
+        </button>
         {uploadError && <span className="text-xs text-danger">{uploadError}</span>}
       </div>
+
+      {showNewDoc && (
+        <div className="mb-4 flex items-center gap-2">
+          <input
+            type="text"
+            value={newDocTitle}
+            onChange={e => setNewDocTitle(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") handleCreateDoc()
+              if (e.key === "Escape") setShowNewDoc(false)
+            }}
+            placeholder="Document title..."
+            autoFocus
+            className="rounded-lg border border-gray-dark bg-black-light px-3 py-2 text-sm text-white placeholder:text-gray focus:border-gold focus:outline-none"
+          />
+          <button
+            onClick={handleCreateDoc}
+            disabled={creatingDoc || !newDocTitle.trim()}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold text-black-deep transition-colors hover:bg-gold/80 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setShowNewDoc(false)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-dark text-gray transition-colors hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {showNewFolder && (
         <div className="mb-4 flex items-center gap-2">
@@ -321,6 +411,7 @@ export function ArchiveBrowser({ guildId, guildName }: ArchiveBrowserProps) {
               <FileRow
                 key={node.id}
                 node={node}
+                guildId={guildId}
                 onFolderClick={handleFolderClick}
                 onDelete={n => setDeleteConfirm(n)}
               />

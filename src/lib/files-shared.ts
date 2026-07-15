@@ -18,6 +18,16 @@ export interface FileNode {
   updatedAt: string
 }
 
+/**
+ * Sentinel mime for a live collaborative doc (Y.js state lives in
+ * doc_states keyed by file_node id).
+ */
+export const DOC_MIME = "application/vnd.sanctum.doc"
+
+export function isDocNode(n: Pick<FileNode, "isFolder" | "mime">): boolean {
+  return !n.isFolder && n.mime === DOC_MIME
+}
+
 export function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes || bytes === 0) return ""
   const k = 1024

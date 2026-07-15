@@ -10,8 +10,9 @@ import { db } from "./db"
 import { S3_BUCKET, archiveKey, nextcloudLegacyKey, s3 } from "./s3"
 
 export type { FileNode } from "./files-shared"
-export { formatFileSize } from "./files-shared"
+export { formatFileSize, DOC_MIME, isDocNode } from "./files-shared"
 import type { FileNode } from "./files-shared"
+import { DOC_MIME } from "./files-shared"
 
 /**
  * Native archive file index.
@@ -118,6 +119,27 @@ export async function createFolder(
 }
 
 /**
+ * Create a live document node. `storage_key = 'doc'` is the sentinel;
+ * Y.js state lives in the doc_states table and is materialised lazily
+ * by the HocusPocus server on first connect.
+ */
+export async function createDoc(
+  guildId: string,
+  parentId: string | null,
+  name: string,
+  createdBy: string,
+): Promise<FileNode> {
+  const res = await db.query<FileNodeRow>(
+    `INSERT INTO file_nodes
+       (guild_id, parent_id, name, is_folder, mime, storage_key, created_by)
+     VALUES ($1, $2, $3, FALSE, $4, 'doc', $5)
+     RETURNING *`,
+    [guildId, parentId, name, DOC_MIME, createdBy],
+  )
+  return rowToNode(res.rows[0])
+}
+
+/**
  * Insert a placeholder row, upload the blob, then flip storage_key from
  * 'pending' to the real key. If the S3 put fails, drop the row so the
  * tree never shows a phantom entry.
@@ -175,7 +197,10 @@ export async function deleteNode(nodeId: string): Promise<void> {
        SELECT f.id, f.storage_key
          FROM file_nodes f JOIN sub s ON f.parent_id = s.id
      )
-     SELECT storage_key FROM sub WHERE storage_key IS NOT NULL AND storage_key <> 'pending'`,
+     SELECT storage_key FROM sub
+       WHERE storage_key IS NOT NULL
+         AND storage_key <> 'pending'
+         AND storage_key <> 'doc'`,
     [nodeId],
   )
 
@@ -198,7 +223,12 @@ export async function deleteNode(nodeId: string): Promise<void> {
  * the download filename to the node's real name (not the opaque key).
  */
 export async function presignDownload(node: FileNode): Promise<string> {
-  if (node.isFolder || !node.storageKey || node.storageKey === "pending") {
+  if (
+    node.isFolder ||
+    !node.storageKey ||
+    node.storageKey === "pending" ||
+    node.storageKey === "doc"
+  ) {
     throw new Error("Not a downloadable file")
   }
   const cmd = new GetObjectCommand({

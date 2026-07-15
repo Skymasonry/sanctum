@@ -1,7 +1,7 @@
 import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
 
-import { createFolder, listChildren, uploadFile } from "@/lib/files"
+import { createDoc, createFolder, listChildren, uploadFile } from "@/lib/files"
 import { getGuild } from "@/lib/guilds"
 
 async function authUsername(): Promise<string | null> {
@@ -84,18 +84,26 @@ export async function POST(
 
   const body = (await request.json().catch(() => ({}))) as {
     folderName?: string
+    docTitle?: string
     parentId?: string | null
   }
+  const parentId = body.parentId ?? null
+
+  if (body.docTitle && body.docTitle.trim().length > 0) {
+    try {
+      const node = await createDoc(guildId, parentId, body.docTitle.trim(), caller)
+      return NextResponse.json({ node })
+    } catch (err) {
+      console.error("createDoc failed:", err)
+      return NextResponse.json({ error: "Doc create failed" }, { status: 500 })
+    }
+  }
+
   if (!body.folderName || body.folderName.trim().length === 0) {
-    return NextResponse.json({ error: "folderName required" }, { status: 400 })
+    return NextResponse.json({ error: "folderName or docTitle required" }, { status: 400 })
   }
   try {
-    const node = await createFolder(
-      guildId,
-      body.parentId ?? null,
-      body.folderName.trim(),
-      caller,
-    )
+    const node = await createFolder(guildId, parentId, body.folderName.trim(), caller)
     return NextResponse.json({ node })
   } catch (err) {
     console.error("createFolder failed:", err)
