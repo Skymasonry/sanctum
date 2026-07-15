@@ -25,7 +25,9 @@ function colorForUser(label: string): string {
 
 export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
   const ydoc = useMemo(() => new Y.Doc(), [])
-  const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
+  const [status, setStatus] = useState<string>("connecting")
+  const [synced, setSynced] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null)
 
   useEffect(() => {
@@ -43,7 +45,9 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
         name: nodeId,
         document: ydoc,
         token,
-        onStatus: ({ status }) => setStatus(status),
+        onStatus: ({ status }) => setStatus(String(status)),
+        onSynced: () => setSynced(true),
+        onAuthenticationFailed: ({ reason }) => setAuthError(reason || "auth failed"),
       })
       setProvider(created)
     })()
@@ -81,14 +85,24 @@ export function DocEditor({ nodeId, userLabel }: DocEditorProps) {
       <div className="mb-2 flex items-center gap-2 text-xs">
         <span
           className={`h-2 w-2 rounded-full ${
-            status === "connected"
+            authError
+              ? "bg-danger"
+              : synced
               ? "bg-success"
-              : status === "connecting"
-              ? "bg-gold animate-pulse"
-              : "bg-danger"
+              : status === "connected"
+              ? "bg-gold"
+              : "bg-gold animate-pulse"
           }`}
         />
-        <span className="text-gray">{status}</span>
+        <span className="text-gray">
+          {authError
+            ? `auth: ${authError}`
+            : synced
+            ? "saved"
+            : status === "connected"
+            ? "syncing"
+            : status}
+        </span>
       </div>
       <div className="flex-1 overflow-auto rounded-lg border border-gray-dark bg-black-deep">
         <EditorContent editor={editor} />
