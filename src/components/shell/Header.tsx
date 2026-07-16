@@ -10,10 +10,12 @@ interface HeaderProps {
   } | null
 }
 
-// Authentik-hosted logout flow. Configured in the Authentik admin as
-// the "sanctum-logout" flow; hitting this URL clears the session and
-// bounces the user back through the login prompt.
-const LOGOUT_URL = "https://auth.skymasons.xyz/if/flow/sanctum-logout/"
+// Authentik proxy-outpost sign-out endpoint. Hitting this ends the
+// forward-auth session and lets the outpost's post_logout_redirect
+// bring the user back to Sanctum's front door (or straight to the
+// re-login prompt if the outpost is configured that way). This is
+// the officially supported logout URL for forward-auth deployments.
+const LOGOUT_URL = "/outpost.goauthentik.io/sign_out"
 
 export function Header({ user }: HeaderProps) {
   if (!user) return null
