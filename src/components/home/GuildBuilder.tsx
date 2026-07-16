@@ -35,24 +35,21 @@ export function GuildBuilder() {
     const file = e.target.files?.[0]
     e.target.value = ""
     if (!file) return
-    console.log("[picked]", { name: file.name, type: file.type, size: file.size })
     if (file.type !== "image/svg+xml" && !file.name.toLowerCase().endsWith(".svg")) {
-      setError(`Only SVG files are supported. Got type=${file.type || "unknown"}, name=${file.name}`)
+      setError("Only SVG files are supported.")
       return
     }
     try {
       const text = await file.text()
-      console.log("[file text first 200]", text.slice(0, 200))
       const clean = sanitizeSvg(text)
       if (!clean) {
-        setError(`File is empty after trim.`)
+        setError("That file is empty.")
         return
       }
       setUploadedSvg(clean)
       setUploadPreview(`data:image/svg+xml;utf8,${encodeURIComponent(clean)}`)
       setError(null)
     } catch (err) {
-      console.error("[svg pick error]", err)
       setError(err instanceof Error ? err.message : "Failed to read SVG")
     }
   }
