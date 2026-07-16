@@ -2,6 +2,7 @@ import { Settings as SettingsIcon } from "lucide-react"
 import { notFound, redirect } from "next/navigation"
 
 import { ChamberSettings } from "@/components/guild-settings/ChamberSettings"
+import { InfoSettings } from "@/components/guild-settings/InfoSettings"
 import { ChamberHeader } from "@/components/shared"
 import { getUser } from "@/lib/auth"
 import { getGuild } from "@/lib/guilds"
@@ -31,6 +32,18 @@ export default async function GuildSettingsPage({ params }: GuildSettingsPagePro
       />
 
       <section className="mt-2 rounded-xl border border-gray-dark bg-black-deep p-5">
+        <h2 className="mb-1 font-display text-lg tracking-wide text-white">Guild info</h2>
+        <p className="mb-4 text-sm text-gray">
+          Name and purpose shown on the guild home and in Discover.
+        </p>
+        <InfoSettings
+          guildId={guildId}
+          initialName={guild.name}
+          initialDescription={guild.description}
+        />
+      </section>
+
+      <section className="mt-5 rounded-xl border border-gray-dark bg-black-deep p-5">
         <h2 className="mb-1 font-display text-lg tracking-wide text-white">Chambers</h2>
         <p className="mb-4 text-sm text-gray">
           Toggle which chambers appear on this guild&apos;s home page.

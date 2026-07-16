@@ -37,23 +37,17 @@ export function ChambersToggle({ value, onToggle }: ChambersToggleProps) {
             </div>
             <span
               className={
-                "h-4 w-4 shrink-0 rounded border-2 " +
-                (on ? "border-guild bg-guild" : "border-gray-dark bg-transparent")
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors " +
+                (on ? "bg-guild" : "bg-gray-dark")
               }
               aria-hidden
             >
-              {on && (
-                <svg viewBox="0 0 16 16" className="h-full w-full text-black-deep">
-                  <path
-                    d="M3 8.5l3 3 7-7"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
+              <span
+                className={
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform " +
+                  (on ? "translate-x-[22px]" : "translate-x-0.5")
+                }
+              />
             </span>
           </button>
         )

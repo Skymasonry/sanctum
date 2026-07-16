@@ -119,6 +119,35 @@ export async function POST(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ guildId: string }> },
+) {
+  const auth = await getAuthHeaders()
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { guildId } = await params
+
+  const { getGuild } = await import("@/lib/guilds")
+  const { updateGuildInfo } = await import("@/lib/guild-writes")
+
+  const guild = await getGuild(guildId)
+  if (!guild) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (auth["X-Authentik-Username"].toLowerCase() !== guild.seederUid.toLowerCase()) {
+    return NextResponse.json({ error: "Seeder only" }, { status: 403 })
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    name?: string
+    description?: string
+    icon?: string
+    color?: string
+    admission?: "open" | "closed" | "mandatory"
+  }
+  const ok = await updateGuildInfo(guildId, body)
+  if (!ok) return NextResponse.json({ error: "Nothing to update" }, { status: 400 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }

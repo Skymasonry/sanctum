@@ -251,6 +251,38 @@ export async function rejectApplication(
   return (res.rowCount ?? 0) > 0
 }
 
+export interface UpdateGuildInfoInput {
+  name?: string
+  description?: string
+  icon?: string
+  color?: string
+  admission?: "open" | "closed" | "mandatory"
+}
+
+/**
+ * Update editable guild fields. Seeder-only, gated by the caller.
+ */
+export async function updateGuildInfo(
+  guildId: string,
+  patch: UpdateGuildInfoInput,
+): Promise<boolean> {
+  const sets: string[] = []
+  const params: unknown[] = []
+  let n = 1
+  if (patch.name !== undefined) { sets.push(`name = $${n++}`); params.push(patch.name) }
+  if (patch.description !== undefined) { sets.push(`description = $${n++}`); params.push(patch.description) }
+  if (patch.icon !== undefined) { sets.push(`icon = $${n++}`); params.push(patch.icon) }
+  if (patch.color !== undefined) { sets.push(`color = $${n++}`); params.push(patch.color) }
+  if (patch.admission !== undefined) { sets.push(`admission = $${n++}`); params.push(patch.admission) }
+  if (sets.length === 0) return false
+  params.push(guildId)
+  const res = await db.query(
+    `UPDATE guilds SET ${sets.join(", ")} WHERE id = $${n}`,
+    params,
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
 /**
  * Update the enabled chambers list for a guild. Seeder-only, gated by
  * the caller.
