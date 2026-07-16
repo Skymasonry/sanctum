@@ -4,7 +4,7 @@ interface FetchOptions {
   headers?: Record<string, string>
 }
 
-export function fetchFromNextcloud(path: string, options: FetchOptions = {}): Promise<any> {
+export function fetchFromNextcloud<T = unknown>(path: string, options: FetchOptions = {}): Promise<T> {
   return new Promise((resolve, reject) => {
     const reqOptions = {
       hostname: "nextcloud",
@@ -39,7 +39,11 @@ export function fetchFromNextcloud(path: string, options: FetchOptions = {}): Pr
   })
 }
 
-export function postToNextcloud(path: string, body: any, options: FetchOptions = {}): Promise<any> {
+export function postToNextcloud<T = unknown>(
+  path: string,
+  body: unknown,
+  options: FetchOptions = {},
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const postData = JSON.stringify(body)
     
@@ -63,9 +67,9 @@ export function postToNextcloud(path: string, body: any, options: FetchOptions =
       res.on("end", () => {
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
           try {
-            resolve(data ? JSON.parse(data) : {})
+            resolve((data ? JSON.parse(data) : {}) as T)
           } catch {
-            resolve({})
+            resolve({} as T)
           }
         } else {
           reject(new Error(`HTTP ${res.statusCode}`))

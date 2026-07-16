@@ -171,7 +171,7 @@ async function readLastSeen(
   authHeaders: Record<string, string>,
 ): Promise<{ previous: string | null; current: string }> {
   try {
-    const resp = await fetchFromNextcloud(
+    const resp = await fetchFromNextcloud<{ lastSeen?: string | null }>(
       "/apps/skymasonsnav/api/threshold/last-seen",
       { headers: authHeaders },
     )

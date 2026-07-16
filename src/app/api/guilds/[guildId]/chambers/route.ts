@@ -5,11 +5,6 @@ import { updateGuildChambers } from "@/lib/guild-writes"
 import { getGuild } from "@/lib/guilds"
 import type { ChamberId } from "@/types/guild"
 
-async function authUsername(): Promise<string | null> {
-  const h = await headers()
-  return h.get("x-authentik-username")
-}
-
 /**
  * PATCH /api/guilds/{guildId}/chambers
  *   { chambers: ChamberId[] }
@@ -19,7 +14,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> },
 ) {
-  const caller = await authUsername()
+  const h = await headers()
+  const caller = h.get("x-authentik-username")
   if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { guildId } = await params

@@ -45,7 +45,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 export async function getStacks(boardId: number): Promise<DeckStack[]> {
   try {
     const authHeaders = await getAuthHeaders()
-    const data = await fetchFromNextcloud(
+    const data = await fetchFromNextcloud<{ stacks?: DeckStack[] }>(
       `/apps/skymasonsnav/api/deck/${boardId}/stacks`,
       { headers: authHeaders }
     )

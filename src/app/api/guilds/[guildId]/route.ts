@@ -1,6 +1,8 @@
 import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
-import http from "http"
+import http, { type RequestOptions } from "http"
+
+import { getGuild } from "@/lib/guilds"
 
 const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80"
 
@@ -17,11 +19,25 @@ async function getAuthHeaders() {
   }
 }
 
-function ncRequest(method: string, path: string, authHeaders: Record<string, string>, body?: string): Promise<any> {
+async function requireSeeder(
+  guildId: string,
+  callerUsername: string,
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const guild = await getGuild(guildId)
+  if (!guild) {
+    return { ok: false, response: NextResponse.json({ error: "Not found" }, { status: 404 }) }
+  }
+  if (callerUsername.toLowerCase() !== guild.seederUid.toLowerCase()) {
+    return { ok: false, response: NextResponse.json({ error: "Seeder only" }, { status: 403 }) }
+  }
+  return { ok: true }
+}
+
+function ncRequest(method: string, path: string, authHeaders: Record<string, string>, body?: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const url = new URL(NEXTCLOUD_URL)
     const bodyBuf = body ? Buffer.from(body) : null
-    const reqOptions: any = {
+    const reqOptions: RequestOptions = {
       hostname: url.hostname,
       port: Number(url.port) || 80,
       path,
@@ -32,9 +48,9 @@ function ncRequest(method: string, path: string, authHeaders: Record<string, str
         ...authHeaders,
       },
     }
-    if (bodyBuf) {
-      reqOptions.headers["Content-Type"] = "application/json"
-      reqOptions.headers["Content-Length"] = bodyBuf.length
+    if (bodyBuf && reqOptions.headers) {
+      ;(reqOptions.headers as Record<string, string | number>)["Content-Type"] = "application/json"
+      ;(reqOptions.headers as Record<string, string | number>)["Content-Length"] = bodyBuf.length
     }
     const req = http.request(reqOptions, (res) => {
       let data = ""
@@ -88,6 +104,8 @@ export async function POST(
       }
       case "approve":
       case "reject": {
+        const gate = await requireSeeder(guildId, username)
+        if (!gate.ok) return gate.response
         const body = (await request.json().catch(() => ({}))) as { memberId?: string }
         if (!body.memberId) {
           return NextResponse.json({ error: "memberId required" }, { status: 400 })
@@ -95,14 +113,14 @@ export async function POST(
         const ok = action === "approve"
           ? await approveApplication(guildId, body.memberId, auth)
           : await rejectApplication(guildId, body.memberId)
-        if (action === "approve" && ok) {
-          // approveApplication adds the member itself; addMember not needed
-        } else if (!ok) {
+        if (!ok) {
           return NextResponse.json({ error: "Application not found" }, { status: 404 })
         }
         return NextResponse.json({ success: ok })
       }
       case "invite": {
+        const gate = await requireSeeder(guildId, username)
+        if (!gate.ok) return gate.response
         const body = (await request.json().catch(() => ({}))) as { members?: string[] }
         const added: string[] = []
         for (const m of body.members ?? []) {
@@ -127,14 +145,10 @@ export async function PATCH(
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { guildId } = await params
 
-  const { getGuild } = await import("@/lib/guilds")
-  const { updateGuildInfo } = await import("@/lib/guild-writes")
+  const gate = await requireSeeder(guildId, auth["X-Authentik-Username"])
+  if (!gate.ok) return gate.response
 
-  const guild = await getGuild(guildId)
-  if (!guild) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (auth["X-Authentik-Username"].toLowerCase() !== guild.seederUid.toLowerCase()) {
-    return NextResponse.json({ error: "Seeder only" }, { status: 403 })
-  }
+  const { updateGuildInfo } = await import("@/lib/guild-writes")
 
   const body = (await request.json().catch(() => ({}))) as {
     name?: string
