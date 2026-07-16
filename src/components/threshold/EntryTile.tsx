@@ -32,16 +32,16 @@ export function EntryTile({ href, icon: Icon, title, description, badge, externa
         </span>
       )}
 
-      {/* Icon medallion — dominant visual */}
+      {/* Icon medallion — dominant visual, no border */}
       <div
         className={cn(
-          "mb-3 flex h-16 w-16 items-center justify-center rounded-2xl",
-          "bg-guild/12 ring-1 ring-guild/30 transition-all duration-200",
-          "group-hover:bg-guild/20 group-hover:ring-guild/60",
+          "mb-3 flex h-20 w-20 items-center justify-center rounded-2xl",
+          "bg-guild/12 transition-colors duration-200",
+          "group-hover:bg-guild/20",
         )}
       >
         <Icon
-          className="h-8 w-8 text-guild transition-transform duration-200 group-hover:scale-110"
+          className="h-12 w-12 text-guild transition-transform duration-200 group-hover:scale-110"
           strokeWidth={1.5}
         />
       </div>
