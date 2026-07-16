@@ -1,6 +1,8 @@
 import { db } from "./db"
 import { postToNextcloud } from "./api"
-import type { Guild } from "@/types/guild"
+import type { ChamberId, Guild } from "@/types/guild"
+
+const ALL_CHAMBERS: ChamberId[] = ["pulse", "chamber", "rites", "quests", "scrolls", "archive", "brotherhood"]
 
 /**
  * Native Sanctum write helpers for guilds.
@@ -43,6 +45,7 @@ export interface CreateGuildInput {
   category?: string
   patternIntegrity?: string
   evolutionaryPurpose?: string
+  chambers?: ChamberId[]
   applicationForm?: { agreements: Array<{ id: number; text: string }> }
   inviteMembers?: string[]
 }
@@ -74,13 +77,17 @@ export async function createGuild(
   const id = await generateGuildId(input.name)
   const members = [seederUid, ...(input.inviteMembers ?? []).filter(m => m !== seederUid)]
 
+  const chambers: ChamberId[] = (input.chambers ?? ALL_CHAMBERS).filter(c =>
+    ALL_CHAMBERS.includes(c),
+  )
+
   await db.query("BEGIN")
   try {
     await db.query(
       `INSERT INTO guilds (
          id, name, description, icon, color, admission, category,
-         pattern_integrity, evolutionary_purpose, seeder_uid, group_name
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$1)`,
+         pattern_integrity, evolutionary_purpose, seeder_uid, group_name, chambers
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$1,$11::text[])`,
       [
         id,
         input.name,
@@ -92,6 +99,7 @@ export async function createGuild(
         input.patternIntegrity ?? "",
         input.evolutionaryPurpose ?? "",
         seederUid,
+        chambers,
       ],
     )
     for (const uid of members) {
@@ -239,6 +247,22 @@ export async function rejectApplication(
        SET status = 'rejected', resolved_at = NOW()
      WHERE guild_id = $1 AND user_id = $2 AND status = 'pending'`,
     [guildId, applicantId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+/**
+ * Update the enabled chambers list for a guild. Seeder-only, gated by
+ * the caller.
+ */
+export async function updateGuildChambers(
+  guildId: string,
+  chambers: ChamberId[],
+): Promise<boolean> {
+  const clean = chambers.filter(c => ALL_CHAMBERS.includes(c))
+  const res = await db.query(
+    `UPDATE guilds SET chambers = $2::text[] WHERE id = $1`,
+    [guildId, clean],
   )
   return (res.rowCount ?? 0) > 0
 }

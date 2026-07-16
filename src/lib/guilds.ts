@@ -1,7 +1,9 @@
 import { headers } from "next/headers"
 
 import { db } from "./db"
-import type { Guild, GuildApplication } from "@/types/guild"
+import type { ChamberId, Guild, GuildApplication } from "@/types/guild"
+
+const ALL_CHAMBERS: ChamberId[] = ["pulse", "chamber", "rites", "quests", "scrolls", "archive", "brotherhood"]
 
 /**
  * Native Sanctum membership layer (Slice 1 of the rebuild).
@@ -30,6 +32,7 @@ interface GuildRow {
   folder_name: string | null
   deck_board_id: number | null
   group_name: string | null
+  chambers: string[] | null
 }
 
 function rowToGuild(row: GuildRow, members: string[], pending: string[], applications: GuildApplication[], agreements: Array<{ id: number; text: string }>): Guild {
@@ -50,6 +53,9 @@ function rowToGuild(row: GuildRow, members: string[], pending: string[], applica
     evolutionaryPurpose: row.evolutionary_purpose,
     createdAt: row.created_at.toISOString(),
     circleId: "",
+    chambers: (row.chambers && row.chambers.length > 0
+      ? (row.chambers.filter(c => ALL_CHAMBERS.includes(c as ChamberId)) as ChamberId[])
+      : ALL_CHAMBERS),
     applicationForm: { agreements },
     resources: {
       talkRoom: row.talk_room,

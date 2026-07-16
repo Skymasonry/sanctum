@@ -82,6 +82,9 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
     description: `${guild?.memberCount || 0} members`,
   })
 
+  const enabled = new Set(guild?.chambers ?? [])
+  const visible = enabled.size > 0 ? chambers.filter(c => enabled.has(c.id as never)) : chambers
+
   return (
     <motion.div
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -89,7 +92,7 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
       initial="initial"
       animate="animate"
     >
-      {chambers.map((chamber) => (
+      {visible.map((chamber) => (
         <motion.div key={chamber.id} variants={staggerItem}>
           <EntryTile
             href={chamber.href || `/guild/${guildId}/${chamber.id}`}

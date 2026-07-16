@@ -15,6 +15,19 @@ import {
 } from "lucide-react"
 
 import { sanitizeSvg } from "@/lib/svg-sanitize"
+import type { ChamberId } from "@/types/guild"
+
+const CHAMBER_DEFS: { id: ChamberId; icon: typeof Archive; name: string; note: string }[] = [
+  { id: "pulse", icon: MessageCircle, name: "Chat", note: "Whispers between members" },
+  { id: "chamber", icon: Video, name: "Chamber", note: "Live meeting hall" },
+  { id: "rites", icon: Calendar, name: "Rites", note: "Shared calendar" },
+  { id: "quests", icon: Target, name: "Quests", note: "Kanban of tasks" },
+  { id: "scrolls", icon: FileText, name: "Scrolls", note: "Surveys & forms" },
+  { id: "archive", icon: Archive, name: "Archive", note: "Files + live docs" },
+  { id: "brotherhood", icon: Users, name: "Brothers", note: "Member roster" },
+]
+
+const DEFAULT_CHAMBERS: ChamberId[] = CHAMBER_DEFS.map(c => c.id)
 
 const ADMISSION_OPTIONS = [
   { value: "open", label: "Open — anyone can join" },
@@ -35,6 +48,16 @@ export function GuildBuilder() {
   const [description, setDescription] = useState("")
   const [color, setColor] = useState(COLOR_PRESETS[0])
   const [admission, setAdmission] = useState<"open" | "closed" | "mandatory">("open")
+  const [chambers, setChambers] = useState<Set<ChamberId>>(new Set(DEFAULT_CHAMBERS))
+
+  const toggleChamber = (id: ChamberId) => {
+    setChambers(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -93,6 +116,7 @@ export function GuildBuilder() {
             icon: iconUrl ?? "⬡",
             color,
             admission,
+            chambers: Array.from(chambers),
           }),
         })
         if (!res.ok) {
@@ -212,32 +236,54 @@ export function GuildBuilder() {
 
       <div>
         <label className="mb-2 block text-xs uppercase tracking-widest text-faint">
-          Chambers included
+          Chambers to include
         </label>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {[
-            { icon: MessageCircle, name: "Chat", note: "Whispers between members" },
-            { icon: Video, name: "Chamber", note: "Live meeting hall" },
-            { icon: Calendar, name: "Rites", note: "Shared calendar" },
-            { icon: Target, name: "Quests", note: "Kanban of tasks" },
-            { icon: FileText, name: "Scrolls", note: "Surveys & forms" },
-            { icon: Archive, name: "Archive", note: "Files + live docs" },
-            { icon: Users, name: "Brothers", note: "Member roster" },
-          ].map(c => (
-            <div
-              key={c.name}
-              className="flex items-center gap-3 rounded-lg border border-gray-dark bg-black-deep px-3 py-2"
-            >
-              <c.icon className="h-4 w-4 shrink-0 text-guild" />
-              <div className="min-w-0">
-                <p className="text-sm text-white">{c.name}</p>
-                <p className="truncate text-xs text-faint">{c.note}</p>
-              </div>
-            </div>
-          ))}
+          {CHAMBER_DEFS.map(c => {
+            const on = chambers.has(c.id)
+            return (
+              <button
+                type="button"
+                key={c.id}
+                onClick={() => toggleChamber(c.id)}
+                className={
+                  "flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors " +
+                  (on
+                    ? "border-guild bg-guild/10"
+                    : "border-gray-dark bg-black-deep opacity-60 hover:opacity-100")
+                }
+              >
+                <c.icon className={"h-4 w-4 shrink-0 " + (on ? "text-guild" : "text-gray")} />
+                <div className="min-w-0 flex-1">
+                  <p className={"text-sm " + (on ? "text-white" : "text-gray-light")}>{c.name}</p>
+                  <p className="truncate text-xs text-faint">{c.note}</p>
+                </div>
+                <span
+                  className={
+                    "h-4 w-4 shrink-0 rounded border-2 " +
+                    (on ? "border-guild bg-guild" : "border-gray-dark bg-transparent")
+                  }
+                  aria-hidden
+                >
+                  {on && (
+                    <svg viewBox="0 0 16 16" className="h-full w-full text-black-deep">
+                      <path
+                        d="M3 8.5l3 3 7-7"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </span>
+              </button>
+            )
+          })}
         </div>
         <p className="mt-2 text-xs text-faint">
-          All chambers come with every guild. Per-chamber enable/disable is coming later.
+          You can change this later from the guild&apos;s settings.
         </p>
       </div>
 
