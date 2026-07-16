@@ -10,6 +10,11 @@ interface HeaderProps {
   } | null
 }
 
+// Authentik-hosted logout flow. Configured in the Authentik admin as
+// the "sanctum-logout" flow; hitting this URL clears the session and
+// bounces the user back through the login prompt.
+const LOGOUT_URL = "https://auth.skymasons.xyz/if/flow/sanctum-logout/"
+
 export function Header({ user }: HeaderProps) {
   if (!user) return null
 
@@ -27,13 +32,13 @@ export function Header({ user }: HeaderProps) {
           className="h-9 w-9 rounded-full border border-gray-dark"
         />
       </Link>
-      <Link
-        href="/api/auth/signout"
+      <a
+        href={LOGOUT_URL}
         className="flex items-center gap-1.5 text-sm text-gray-light transition-colors hover:text-gold"
       >
         <LogOut className="h-4 w-4" />
         <span>Depart</span>
-      </Link>
+      </a>
     </header>
   )
 }
