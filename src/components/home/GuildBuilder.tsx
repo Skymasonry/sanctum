@@ -9,6 +9,12 @@ import { ALL_CHAMBER_IDS } from "@/lib/chambers"
 import { sanitizeSvg } from "@/lib/svg-sanitize"
 import type { ChamberId } from "@/types/guild"
 
+import { GlyphPicker } from "./GlyphPicker"
+
+const DEFAULT_GLYPH = "✦"
+
+type EmblemMode = "glyph" | "upload"
+
 const ADMISSION_OPTIONS = [
   { value: "open", label: "Open — anyone can join" },
   { value: "closed", label: "Closed — application required" },
@@ -29,6 +35,9 @@ export function GuildBuilder() {
   const [color, setColor] = useState(COLOR_PRESETS[0])
   const [admission, setAdmission] = useState<"open" | "closed" | "mandatory">("open")
   const [chambers, setChambers] = useState<Set<ChamberId>>(new Set(ALL_CHAMBER_IDS))
+
+  const [emblemMode, setEmblemMode] = useState<EmblemMode>("glyph")
+  const [glyph, setGlyph] = useState<string>(DEFAULT_GLYPH)
 
   const toggleChamber = (id: ChamberId) => {
     setChambers(prev => {
@@ -73,8 +82,9 @@ export function GuildBuilder() {
     setError(null)
     start(async () => {
       try {
-        let iconUrl: string | null = null
-        if (uploadedSvg) {
+        let icon = glyph || DEFAULT_GLYPH
+        if (emblemMode === "upload") {
+          if (!uploadedSvg) throw new Error("Choose an SVG or switch to a glyph")
           const blob = new Blob([uploadedSvg], { type: "image/svg+xml" })
           const fd = new FormData()
           fd.append("file", blob, "emblem.svg")
@@ -84,7 +94,7 @@ export function GuildBuilder() {
             throw new Error(err?.error || `Icon upload failed: HTTP ${upRes.status}`)
           }
           const upData = (await upRes.json()) as { url: string }
-          iconUrl = upData.url
+          icon = upData.url
         }
 
         const res = await fetch(`/api/guilds/create`, {
@@ -93,7 +103,7 @@ export function GuildBuilder() {
           body: JSON.stringify({
             name: name.trim(),
             description: description.trim(),
-            icon: iconUrl ?? "⬡",
+            icon,
             color,
             admission,
             chambers: Array.from(chambers),
@@ -139,47 +149,88 @@ export function GuildBuilder() {
 
       <div>
         <label className="mb-2 block text-xs uppercase tracking-widest text-faint">Emblem</label>
-        <div className="flex items-center gap-4">
-          <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-dark bg-black-deep">
-            {uploadPreview ? (
-              <img src={uploadPreview} alt="preview" className="h-full w-full object-contain" />
-            ) : (
-              <Upload className="h-8 w-8 text-gray" />
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg border border-gray-dark bg-black-light px-3 py-2 text-sm text-white transition-colors hover:border-guild/50 hover:bg-guild/10"
+        <div className="mb-3 inline-flex rounded-lg border border-gray-dark bg-black-light p-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setEmblemMode("glyph")}
+            className={
+              "rounded-md px-3 py-1.5 transition-colors " +
+              (emblemMode === "glyph"
+                ? "bg-guild/20 text-guild"
+                : "text-gray hover:text-white")
+            }
+          >
+            Pick a glyph
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmblemMode("upload")}
+            className={
+              "rounded-md px-3 py-1.5 transition-colors " +
+              (emblemMode === "upload"
+                ? "bg-guild/20 text-guild"
+                : "text-gray hover:text-white")
+            }
+          >
+            Upload SVG
+          </button>
+        </div>
+
+        {emblemMode === "glyph" ? (
+          <div className="flex items-start gap-4">
+            <div
+              className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-dark bg-black-deep text-6xl"
+              style={{ color }}
             >
-              {uploadPreview ? "Replace SVG…" : "Choose SVG file…"}
-            </button>
-            {uploadPreview && (
+              {glyph}
+            </div>
+            <div className="min-w-0 flex-1">
+              <GlyphPicker value={glyph} onChange={setGlyph} />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-dark bg-black-deep">
+              {uploadPreview ? (
+                <img src={uploadPreview} alt="preview" className="h-full w-full object-contain" />
+              ) : (
+                <Upload className="h-8 w-8 text-gray" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setUploadedSvg(null)
-                  setUploadPreview(null)
-                }}
-                className="inline-flex items-center gap-1 text-xs text-gray hover:text-danger"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-lg border border-gray-dark bg-black-light px-3 py-2 text-sm text-white transition-colors hover:border-guild/50 hover:bg-guild/10"
               >
-                <X className="h-3 w-3" />
-                Remove
+                {uploadPreview ? "Replace SVG…" : "Choose SVG file…"}
               </button>
-            )}
-            <p className="max-w-xs text-xs text-faint">
-              SVG only. Scripts and event handlers are stripped on upload.
-            </p>
+              {uploadPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadedSvg(null)
+                    setUploadPreview(null)
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-gray hover:text-danger"
+                >
+                  <X className="h-3 w-3" />
+                  Remove
+                </button>
+              )}
+              <p className="max-w-xs text-xs text-faint">
+                SVG only. Scripts and event handlers are stripped on upload.
+              </p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/svg+xml,.svg"
+              onChange={onPickSvg}
+              className="hidden"
+            />
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/svg+xml,.svg"
-            onChange={onPickSvg}
-            className="hidden"
-          />
-        </div>
+        )}
       </div>
 
       <div>
