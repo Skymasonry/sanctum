@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
 
-import { MonogramDesigner } from "./MonogramDesigner"
-import { sanitizeSvg, type MonogramShape } from "./monogram"
+import { sanitizeSvg } from "@/lib/svg-sanitize"
 
 const ADMISSION_OPTIONS = [
   { value: "open", label: "Open — anyone can join" },
@@ -18,8 +17,6 @@ const COLOR_PRESETS = [
   "#f5a05c", "#9c5cf5", "#5cf5f5", "#d4623a", "#e0d19a",
 ]
 
-type EmblemMode = "monogram" | "upload"
-
 export function GuildBuilder() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -31,38 +28,15 @@ export function GuildBuilder() {
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const [emblemMode, setEmblemMode] = useState<EmblemMode>("monogram")
-
-  // Monogram config
-  const [initials, setInitials] = useState("")
-  const [shape, setShape] = useState<MonogramShape>("circle")
-  const [foreground, setForeground] = useState("#ffffff")
-  const [monogramSvg, setMonogramSvg] = useState<string>("")
-
-  // Upload config
   const [uploadedSvg, setUploadedSvg] = useState<string | null>(null)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
-
-  // Derive the initials fallback from the guild name so users don't have to type twice.
-  const derivedInitials = useMemo(() => {
-    const words = name.trim().split(/\s+/).filter(w => !["the", "of", "and"].includes(w.toLowerCase()))
-    if (words.length === 0) return ""
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-    return words.slice(0, 3).map(w => w[0]).join("").toUpperCase()
-  }, [name])
-
-  // Auto-fill initials when the user hasn't typed their own yet.
-  const [initialsTouched, setInitialsTouched] = useState(false)
-  useEffect(() => {
-    if (!initialsTouched) setInitials(derivedInitials)
-  }, [derivedInitials, initialsTouched])
 
   const onPickSvg = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ""
     if (!file) return
     if (file.type !== "image/svg+xml" && !file.name.toLowerCase().endsWith(".svg")) {
-      setError("Only SVG files are supported for upload.")
+      setError("Only SVG files are supported.")
       return
     }
     try {
@@ -86,11 +60,9 @@ export function GuildBuilder() {
     setError(null)
     start(async () => {
       try {
-        // Which SVG are we sending? Monogram config or uploaded file.
-        const svg = emblemMode === "upload" ? uploadedSvg : monogramSvg
         let iconUrl: string | null = null
-        if (svg) {
-          const blob = new Blob([svg], { type: "image/svg+xml" })
+        if (uploadedSvg) {
+          const blob = new Blob([uploadedSvg], { type: "image/svg+xml" })
           const fd = new FormData()
           fd.append("file", blob, "emblem.svg")
           const upRes = await fetch("/api/guild-icons", { method: "POST", body: fd })
@@ -151,93 +123,49 @@ export function GuildBuilder() {
         />
       </div>
 
-      {/* Emblem */}
       <div>
         <label className="mb-2 block text-xs uppercase tracking-widest text-faint">Emblem</label>
-        <div className="mb-3 inline-flex rounded-lg border border-gray-dark bg-black-light p-1 text-sm">
-          <button
-            type="button"
-            onClick={() => setEmblemMode("monogram")}
-            className={
-              "rounded-md px-3 py-1.5 transition-colors " +
-              (emblemMode === "monogram"
-                ? "bg-guild/20 text-guild"
-                : "text-gray hover:text-white")
-            }
-          >
-            Design monogram
-          </button>
-          <button
-            type="button"
-            onClick={() => setEmblemMode("upload")}
-            className={
-              "rounded-md px-3 py-1.5 transition-colors " +
-              (emblemMode === "upload"
-                ? "bg-guild/20 text-guild"
-                : "text-gray hover:text-white")
-            }
-          >
-            Upload SVG
-          </button>
-        </div>
-
-        {emblemMode === "monogram" ? (
-          <MonogramDesigner
-            initials={initials}
-            onInitialsChange={v => {
-              setInitialsTouched(true)
-              setInitials(v)
-            }}
-            shape={shape}
-            onShapeChange={setShape}
-            background={color}
-            foreground={foreground}
-            onForegroundChange={setForeground}
-            onSvgChange={setMonogramSvg}
-          />
-        ) : (
-          <div className="flex items-center gap-4">
-            <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-dark bg-black-deep">
-              {uploadPreview ? (
-                <img src={uploadPreview} alt="preview" className="h-full w-full object-contain" />
-              ) : (
-                <Upload className="h-8 w-8 text-gray" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-dark bg-black-deep">
+            {uploadPreview ? (
+              <img src={uploadPreview} alt="preview" className="h-full w-full object-contain" />
+            ) : (
+              <Upload className="h-8 w-8 text-gray" />
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-lg border border-gray-dark bg-black-light px-3 py-2 text-sm text-white transition-colors hover:border-guild/50 hover:bg-guild/10"
+            >
+              {uploadPreview ? "Replace SVG…" : "Choose SVG file…"}
+            </button>
+            {uploadPreview && (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="rounded-lg border border-gray-dark bg-black-light px-3 py-2 text-sm text-white transition-colors hover:border-guild/50 hover:bg-guild/10"
+                onClick={() => {
+                  setUploadedSvg(null)
+                  setUploadPreview(null)
+                }}
+                className="inline-flex items-center gap-1 text-xs text-gray hover:text-danger"
               >
-                {uploadPreview ? "Replace SVG…" : "Choose SVG file…"}
+                <X className="h-3 w-3" />
+                Remove
               </button>
-              {uploadPreview && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUploadedSvg(null)
-                    setUploadPreview(null)
-                  }}
-                  className="inline-flex items-center gap-1 text-xs text-gray hover:text-danger"
-                >
-                  <X className="h-3 w-3" />
-                  Remove
-                </button>
-              )}
-              <p className="max-w-xs text-xs text-faint">
-                SVG only. Scripts and event handlers are stripped on upload.
-              </p>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/svg+xml,.svg"
-              onChange={onPickSvg}
-              className="hidden"
-            />
+            )}
+            <p className="max-w-xs text-xs text-faint">
+              SVG only. Scripts and event handlers are stripped on upload.
+            </p>
           </div>
-        )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/svg+xml,.svg"
+            onChange={onPickSvg}
+            className="hidden"
+          />
+        </div>
       </div>
 
       <div>
@@ -270,9 +198,6 @@ export function GuildBuilder() {
             />
           </label>
         </div>
-        <p className="mt-2 text-xs text-faint">
-          Also used as the monogram background.
-        </p>
       </div>
 
       <div>
