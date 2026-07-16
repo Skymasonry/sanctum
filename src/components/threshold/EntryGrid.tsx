@@ -25,18 +25,17 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
     href?: string
   }> = []
 
-  // Pulse (Talk) - always show if talkRoom exists
-  if (guild?.resources.talkRoom) {
-    chambers.push({
-      id: "pulse",
-      icon: MessageCircle,
-      title: "The Chat",
-      description: "Whispers in the cove",
-      badge: notifications?.pulse,
-    })
-  }
+  // Every native chamber is always shown. Chambers still backed by
+  // Nextcloud (Pulse, Rites) fall through to an "Open it" screen when
+  // the resource hasn't been provisioned yet.
+  chambers.push({
+    id: "pulse",
+    icon: MessageCircle,
+    title: "The Chat",
+    description: "Whispers in the cove",
+    badge: notifications?.pulse,
+  })
 
-  // Chamber (Jitsi) - always available
   chambers.push({
     id: "chamber",
     icon: Video,
@@ -46,29 +45,22 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
     href: `https://meet.talitamoss.info/${guildId}`,
   })
 
-  // Rites (Calendar) - show if calendarUri exists
-  if (guild?.resources.calendarUri) {
-    chambers.push({
-      id: "rites",
-      icon: Calendar,
-      title: "Rites",
-      description: "Upcoming gatherings",
-      badge: notifications?.rites,
-    })
-  }
+  chambers.push({
+    id: "rites",
+    icon: Calendar,
+    title: "Rites",
+    description: "Upcoming gatherings",
+    badge: notifications?.rites,
+  })
 
-  // Quests (Deck) - show if deckBoardId exists
-  if (guild?.resources.deckBoardId) {
-    chambers.push({
-      id: "quests",
-      icon: Target,
-      title: "Quests",
-      description: "Active endeavors",
-      badge: notifications?.quests,
-    })
-  }
+  chambers.push({
+    id: "quests",
+    icon: Target,
+    title: "Quests",
+    description: "Active endeavors",
+    badge: notifications?.quests,
+  })
 
-  // Scrolls (Forms) - always available
   chambers.push({
     id: "scrolls",
     icon: FileText,
@@ -76,17 +68,13 @@ export function EntryGrid({ guildId, guild, notifications }: EntryGridProps) {
     description: "Inquiries & forms",
   })
 
-  // Archive (Files) - show if folderId exists
-  if (guild?.resources.folderId) {
-    chambers.push({
-      id: "archive",
-      icon: Archive,
-      title: "Archive",
-      description: "Shared knowledge",
-    })
-  }
+  chambers.push({
+    id: "archive",
+    icon: Archive,
+    title: "Archive",
+    description: "Shared knowledge",
+  })
 
-  // Brotherhood - always show
   chambers.push({
     id: "brotherhood",
     icon: Users,

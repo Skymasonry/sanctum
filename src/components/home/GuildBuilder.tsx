@@ -2,7 +2,17 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, X } from "lucide-react"
+import {
+  Archive,
+  Calendar,
+  FileText,
+  MessageCircle,
+  Target,
+  Upload,
+  Users,
+  Video,
+  X,
+} from "lucide-react"
 
 import { sanitizeSvg } from "@/lib/svg-sanitize"
 
@@ -198,6 +208,37 @@ export function GuildBuilder() {
             />
           </label>
         </div>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-xs uppercase tracking-widest text-faint">
+          Chambers included
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {[
+            { icon: MessageCircle, name: "Chat", note: "Whispers between members" },
+            { icon: Video, name: "Chamber", note: "Live meeting hall" },
+            { icon: Calendar, name: "Rites", note: "Shared calendar" },
+            { icon: Target, name: "Quests", note: "Kanban of tasks" },
+            { icon: FileText, name: "Scrolls", note: "Surveys & forms" },
+            { icon: Archive, name: "Archive", note: "Files + live docs" },
+            { icon: Users, name: "Brothers", note: "Member roster" },
+          ].map(c => (
+            <div
+              key={c.name}
+              className="flex items-center gap-3 rounded-lg border border-gray-dark bg-black-deep px-3 py-2"
+            >
+              <c.icon className="h-4 w-4 shrink-0 text-guild" />
+              <div className="min-w-0">
+                <p className="text-sm text-white">{c.name}</p>
+                <p className="truncate text-xs text-faint">{c.note}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-faint">
+          All chambers come with every guild. Per-chamber enable/disable is coming later.
+        </p>
       </div>
 
       <div>
