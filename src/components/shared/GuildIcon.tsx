@@ -6,6 +6,12 @@
  *
  * All three render into the same visual slot so guild badges keep
  * working across sidebar, cards, and chamber headers as we migrate.
+ *
+ * Sizing note: emoji characters render at the caller's *text size*,
+ * not the h-/w- classes; SVGs render at exactly h-/w-. So in surfaces
+ * where the parent text size is big (text-2xl / text-4xl), callers
+ * need to pass an h-/w- class that matches — or SVGs will look
+ * visibly smaller than the emojis they replaced.
  */
 interface GuildIconProps {
   icon?: string | null

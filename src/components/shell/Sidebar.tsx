@@ -187,7 +187,7 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
-        <GuildIcon icon={guild.icon} color={guild.color} className="h-5 w-5 object-contain" />
+        <GuildIcon icon={guild.icon} color={guild.color} className="h-8 w-8 object-contain" />
 
         {signal?.isLive ? (
           <span
