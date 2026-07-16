@@ -1,87 +1,46 @@
 /**
  * Strip anything from an SVG string that could execute in a browser
  * context: script tags, foreign objects, event handler attributes,
- * javascript: hrefs. Runs client-side via DOMParser.
+ * javascript: hrefs.
  *
- * Guild icons are served from S3 (different origin) and rendered via
- * <img>, which already sandboxes active content — this is defense in
- * depth.
- *
- * Returns null with a console.warn describing why on failure so we
- * can debug rejected uploads.
+ * Uses regex rather than DOMParser because DOMParser's strict XML
+ * mode rejects a lot of real-world SVGs (missing xmlns, entities,
+ * quirks from exporters). Guild icons are served from S3 as <img>
+ * anyway, which already sandboxes active content — this is defense
+ * in depth on the string.
  */
 
-const DANGEROUS_ELEMENTS = new Set([
-  "script",
-  "foreignobject",
-  "iframe",
-  "object",
-  "embed",
-  "audio",
-  "video",
-])
+const DANGEROUS_TAG_PAIRS = ["script", "foreignObject", "iframe", "object", "embed", "audio", "video"]
 
-const SVG_NS = "http://www.w3.org/2000/svg"
+export function sanitizeSvg(input: string): string | null {
+  const trimmed = input.trim().replace(/^\uFEFF/, "") // strip BOM
+  if (!trimmed) return null
 
-export function sanitizeSvg(svgText: string): string | null {
-  if (typeof DOMParser === "undefined") return null
-
-  const trimmed = svgText.trim().replace(/^\uFEFF/, "") // strip BOM
-  if (!trimmed) {
-    console.warn("[sanitizeSvg] empty input")
+  // Cheap sanity check that this is actually an SVG.
+  if (!/<svg[\s>]/i.test(trimmed)) {
+    if (typeof console !== "undefined") console.warn("[sanitizeSvg] no <svg> tag found")
     return null
   }
 
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(trimmed, "image/svg+xml")
-  const root = doc.documentElement
+  let out = trimmed
 
-  // Chrome / WebKit put a real parse error under the root as an
-  // element whose text starts with 'error on line'. Firefox uses a
-  // <parsererror> in a Mozilla namespace. Only reject if the root
-  // itself is the parsererror node — otherwise we can mis-match on
-  // false positives (e.g. inline styles that mention "error").
-  if (root.nodeName.toLowerCase() === "parsererror") {
-    console.warn("[sanitizeSvg] DOMParser failed:", root.textContent?.slice(0, 200))
-    return null
+  // Drop entire dangerous elements including any children.
+  for (const tag of DANGEROUS_TAG_PAIRS) {
+    const re = new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}\\s*>`, "gi")
+    out = out.replace(re, "")
+    // Also self-closing / unclosed variants
+    const selfClose = new RegExp(`<${tag}\\b[^>]*\\/?>`, "gi")
+    out = out.replace(selfClose, "")
   }
 
-  const localName = (root.localName || root.tagName).toLowerCase()
-  if (localName !== "svg") {
-    console.warn("[sanitizeSvg] root is not <svg>, got:", localName)
-    return null
-  }
+  // Strip event handler attributes  (onload="...", onerror='...', onclick=…)
+  out = out.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
+  out = out.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
+  out = out.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
 
-  // Some tooling emits an SVG without a namespace declaration; DOMParser
-  // will still return an <svg> element but with a null namespaceURI. We
-  // add it back so the rendered <img> works everywhere.
-  if (!root.namespaceURI) {
-    root.setAttribute("xmlns", SVG_NS)
-  }
+  // Strip javascript: URLs in href / xlink:href.
+  out = out.replace(/\s(?:xlink:)?href\s*=\s*"javascript:[^"]*"/gi, "")
+  out = out.replace(/\s(?:xlink:)?href\s*=\s*'javascript:[^']*'/gi, "")
 
-  const walk = (el: Element) => {
-    const children = Array.from(el.children)
-    for (const child of children) {
-      const tag = (child.localName || child.tagName).toLowerCase()
-      if (DANGEROUS_ELEMENTS.has(tag)) {
-        el.removeChild(child)
-        continue
-      }
-      for (const attr of Array.from(child.attributes)) {
-        const name = attr.name.toLowerCase()
-        const value = attr.value.trim().toLowerCase()
-        if (name.startsWith("on")) child.removeAttribute(attr.name)
-        else if (
-          (name === "href" || name === "xlink:href") &&
-          value.startsWith("javascript:")
-        ) {
-          child.removeAttribute(attr.name)
-        }
-      }
-      walk(child)
-    }
-  }
-  walk(root)
-
-  return new XMLSerializer().serializeToString(root)
+  return out
 }
