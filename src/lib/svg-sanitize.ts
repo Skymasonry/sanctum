@@ -16,12 +16,6 @@ export function sanitizeSvg(input: string): string | null {
   const trimmed = input.trim().replace(/^\uFEFF/, "") // strip BOM
   if (!trimmed) return null
 
-  // Cheap sanity check that this is actually an SVG.
-  if (!/<svg[\s>]/i.test(trimmed)) {
-    if (typeof console !== "undefined") console.warn("[sanitizeSvg] no <svg> tag found")
-    return null
-  }
-
   let out = trimmed
 
   // Drop entire dangerous elements including any children.
