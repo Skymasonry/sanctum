@@ -32,8 +32,18 @@ export function GuildIcon({ icon, className, color, fallback = "⬡" }: GuildIco
   if (isImageIcon(icon)) {
     return <img src={icon} alt="" className={className} />
   }
+  // inline-flex + items-center + justify-center + leading-none centres
+  // the glyph inside the caller's sized box; without this the
+  // character sits at the top-left because it's positioned by text
+  // baseline, not by the box.
   return (
-    <span className={className} style={color ? { color } : undefined}>
+    <span
+      className={
+        (className ? className + " " : "") +
+        "inline-flex items-center justify-center leading-none"
+      }
+      style={color ? { color } : undefined}
+    >
       {icon || fallback}
     </span>
   )
