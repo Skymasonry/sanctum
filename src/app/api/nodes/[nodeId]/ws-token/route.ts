@@ -37,8 +37,14 @@ export async function GET(
   }
 
   const token = signWsToken({ nodeId, userId: caller, guildId: node.guildId })
-  return NextResponse.json({
-    token,
-    wsUrl: process.env.SANCTUM_WS_PUBLIC_URL ?? "wss://neo.skymasons.xyz/hocus",
-  })
+
+  // Derive wsUrl from the incoming request host so neo and prod each
+  // point at their own /hocus. Env override still honoured for local
+  // dev where the request host isn't reachable.
+  const h = await headers()
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "neo.skymasons.xyz"
+  const proto = (h.get("x-forwarded-proto") ?? "https") === "http" ? "ws" : "wss"
+  const wsUrl = process.env.SANCTUM_WS_PUBLIC_URL ?? `${proto}://${host}/hocus`
+
+  return NextResponse.json({ token, wsUrl })
 }
