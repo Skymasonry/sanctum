@@ -1,4 +1,4 @@
-import { Users, UserPlus, ExternalLink } from "lucide-react"
+import { Users, UserPlus } from "lucide-react"
 import { ChamberHeader, Card, CardTitle } from "@/components/shared"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
@@ -12,23 +12,28 @@ interface BrotherhoodPageProps {
 
 function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolean }) {
   return (
-    <Card>
-      <div className="flex items-center gap-4">
-        <img
-          src={`/api/avatar/${username}/48`}
-          alt={username}
-          className="h-12 w-12 flex-shrink-0 rounded-full"
-        />
-        <div className="min-w-0 flex-1">
-          <CardTitle className={isSeeder ? "text-gold group-hover:text-gold" : undefined}>
-            {username}
-          </CardTitle>
-          {isSeeder && (
-            <p className="text-sm text-gold/70">Seeder</p>
-          )}
+    <Link
+      href={`/profile/${encodeURIComponent(username)}`}
+      className="block transition-transform hover:-translate-y-0.5"
+    >
+      <Card>
+        <div className="flex items-center gap-4">
+          <img
+            src={`/api/avatar/${username}/48`}
+            alt={username}
+            className="h-12 w-12 flex-shrink-0 rounded-full"
+          />
+          <div className="min-w-0 flex-1">
+            <CardTitle className={isSeeder ? "text-gold group-hover:text-gold" : undefined}>
+              {username}
+            </CardTitle>
+            {isSeeder && (
+              <p className="text-sm text-gold/70">Seeder</p>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   )
 }
 
@@ -66,15 +71,6 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
           <UserPlus className="h-4 w-4" />
           Invite Someone
         </Link>
-        <a
-          href="https://brothers.skymasons.xyz/apps/contacts/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-dark px-4 py-2 text-sm text-gray transition-colors hover:border-guild/50 hover:text-guild"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open Contacts
-        </a>
       </div>
 
       <div className="flex-1">

@@ -10,6 +10,12 @@ interface HeaderProps {
   } | null
 }
 
+// Authentik-hosted invalidation flow. The proxy outpost's own
+// /sign_out endpoint was returning EOF/502 on our setup; the plain
+// invalidation flow URL is stable. Brand.default_application is set
+// to neo-sanctum so a fresh login after logout lands here again.
+const LOGOUT_URL = "https://auth.skymasons.xyz/if/flow/sanctum-logout/"
+
 export function Header({ user }: HeaderProps) {
   if (!user) return null
 
@@ -27,13 +33,13 @@ export function Header({ user }: HeaderProps) {
           className="h-9 w-9 rounded-full border border-gray-dark"
         />
       </Link>
-      <Link
-        href="/api/auth/signout"
+      <a
+        href={LOGOUT_URL}
         className="flex items-center gap-1.5 text-sm text-gray-light transition-colors hover:text-gold"
       >
         <LogOut className="h-4 w-4" />
         <span>Depart</span>
-      </Link>
+      </a>
     </header>
   )
 }

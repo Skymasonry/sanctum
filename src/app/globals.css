@@ -3,13 +3,20 @@
 @theme {
   /* Colors */
   --color-gold: #c9a227;
+  --color-gold-hi: #e6c65c;
   --color-gold-dim: #a68620;
+  --color-ember: #d4623a;
   --color-black-deep: #0a0a0a;
   --color-black: #111111;
   --color-black-light: #1a1a1a;
+  --color-ash: #171614;
+  --color-ink: #111110;
   --color-gray-dark: #333333;
   --color-gray: #888888;
   --color-gray-light: #b0b0b0;
+  --color-muted: #878175;
+  --color-faint: #5a554e;
+  --color-text: #e9e4d8;
   --color-white: #f0f0f0;
   --color-white-dim: #cccccc;
   --color-danger: #dc5050;
@@ -18,10 +25,13 @@
   /* Fonts */
   --font-display: var(--font-display-face), serif;
   --font-body: var(--font-body-face), Georgia, serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
 
   /* Animations */
   --animate-fade-in: fadeIn 0.4s ease;
   --animate-slide-in: slideIn 0.4s ease;
+  --animate-beat: beat 2s ease-in-out infinite;
+  --animate-sweep: sweep 5s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
@@ -32,6 +42,23 @@
 @keyframes slideIn {
   0% { opacity: 0; transform: translateX(-10px); }
   100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes beat {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* Guild-color utilities — runtime CSS var, can't go in @theme */

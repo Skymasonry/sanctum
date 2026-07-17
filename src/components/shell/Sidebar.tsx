@@ -5,7 +5,10 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
+import { Compass, Plus } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 import { cn } from "@/lib/utils"
+import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
 import type { Guild } from "@/types/guild"
 import { InviteButton } from "./InviteButton"
 
@@ -35,6 +38,7 @@ export function Sidebar({ guilds }: SidebarProps) {
   const pathname = usePathname()
   const currentGuildId = pathname.match(/\/guild\/([^/]+)/)?.[1]
   const [accessOrder, setAccessOrder] = useState<string[]>([])
+  const signals = useThresholdSignals()
 
   // Load access order from localStorage on mount
   useEffect(() => {
@@ -92,9 +96,34 @@ export function Sidebar({ guilds }: SidebarProps) {
               key={guild.id}
               guild={guild}
               isActive={currentGuildId === guild.id}
+              signal={signals.get(guild.id)}
             />
           ))}
         </LayoutGroup>
+        <Link
+          href="/create-guild"
+          className={cn(
+            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-ember/15 text-ember/80 transition-all duration-150",
+            "hover:scale-110 hover:bg-ember/25 hover:text-ember",
+            pathname === "/create-guild" && "bg-ember/25 text-ember",
+          )}
+          title="Seed a new guild"
+          aria-label="Seed a new guild"
+        >
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
+        </Link>
+        <Link
+          href="/discover"
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15 text-gold/80 transition-all duration-150",
+            "hover:scale-110 hover:bg-gold/25 hover:text-gold",
+            pathname === "/discover" && "bg-gold/25 text-gold",
+          )}
+          title="Discover guilds"
+          aria-label="Discover guilds"
+        >
+          <Compass className="h-5 w-5" strokeWidth={2.5} />
+        </Link>
       </nav>
 
       {/* Bottom actions */}
@@ -111,40 +140,26 @@ export function Sidebar({ guilds }: SidebarProps) {
 interface SidebarItemProps {
   guild: Guild
   isActive: boolean
+  signal?: GuildSignal
 }
 
-const QUICK_LINKS = [
-  { label: "The Chat", path: "pulse" },
-  { label: "Rites", path: "rites" },
-]
-const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
-
-function SidebarItem({ guild, isActive }: SidebarItemProps) {
+function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
-  const [flipUp, setFlipUp] = useState(false)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const itemRef = useRef<HTMLDivElement>(null)
 
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
-    openTimer.current = setTimeout(() => {
-      if (itemRef.current) {
-        const rect = itemRef.current.getBoundingClientRect()
-        setFlipUp(rect.bottom + 80 > window.innerHeight)
-      }
-      setOpen(true)
-    }, 150)
+    openTimer.current = setTimeout(() => setOpen(true), 400)
   }
 
   function handleMouseLeave() {
     if (openTimer.current) clearTimeout(openTimer.current)
-    closeTimer.current = setTimeout(() => setOpen(false), 200)
+    closeTimer.current = setTimeout(() => setOpen(false), 100)
   }
 
   return (
     <motion.div
-      ref={itemRef}
       layout
       layoutId={guild.id}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
@@ -172,41 +187,36 @@ function SidebarItem({ guild, isActive }: SidebarItemProps) {
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
-        <span style={{ color: guild.color }}>{guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-5 w-5 object-contain" /> : guild.icon}</span>
+        <GuildIcon icon={guild.icon} color={guild.color} className="h-8 w-8 object-contain" />
+
+        {signal?.isLive ? (
+          <span
+            aria-label="Live now"
+            className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
+            style={{ boxShadow: "0 0 6px #d4623a" }}
+          />
+        ) : signal?.hasUnread ? (
+          <span
+            aria-label="Unread"
+            className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold"
+          />
+        ) : null}
       </Link>
 
-      {/* Hover submenu */}
+      {/* Hover name-only tooltip */}
       <div
         className={cn(
-          "absolute left-full z-50 pl-2 transition-all duration-150",
-          flipUp ? "bottom-0" : "top-1/2 -translate-y-1/2",
-          open ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-1 opacity-0"
+          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-2 transition-all duration-150",
+          open ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0",
         )}
       >
-        <div className="min-w-[160px] overflow-hidden rounded-lg border border-gray-dark bg-black shadow-xl">
+        <div className="rounded-md border border-gray-dark bg-black px-2.5 py-1.5 shadow-xl">
           <div
-            className="border-b border-gray-dark px-3 py-2 text-xs font-semibold uppercase tracking-widest"
+            className="whitespace-nowrap text-xs font-medium tracking-wider"
             style={{ color: guild.color }}
           >
             {guild.name}
           </div>
-          <a
-            href={CHAMBER_HREF(guild.id)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
-          >
-            The Chamber
-          </a>
-          {QUICK_LINKS.map(({ label, path }) => (
-            <Link
-              key={label}
-              href={`/guild/${guild.id}/${path}`}
-              className="block px-3 py-2 text-sm text-gray transition-colors hover:bg-black-light hover:text-white"
-            >
-              {label}
-            </Link>
-          ))}
         </div>
       </div>
     </motion.div>

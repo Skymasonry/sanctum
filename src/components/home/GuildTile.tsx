@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 import type { Guild } from "@/types/guild"
+import { GuildDetailsModal } from "./GuildDetailsModal"
 
 interface GuildTileProps {
   guild: Guild
@@ -15,8 +18,10 @@ interface GuildTileProps {
 }
 
 export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, unreadCount = 0 }: GuildTileProps) {
+  const router = useRouter()
   const [acting, setActing] = useState(false)
   const [actionResult, setActionResult] = useState<string | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const isPending = guild.pending?.some((p) => p.toLowerCase() === username)
 
   const handleAction = async (action: string) => {
@@ -25,6 +30,10 @@ export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, un
       const res = await fetch(`/api/guilds/${guild.id}?action=${action}`, { method: "POST" })
       if (!res.ok) throw new Error()
       setActionResult(action === "join" ? "Joined!" : action === "apply" ? "Applied!" : "Left")
+      // Refresh RSC so Sidebar + membership state re-render with the new guild.
+      if (action === "join" || action === "leave") {
+        router.refresh()
+      }
     } catch {
       setActionResult("Failed")
     } finally {
@@ -67,11 +76,7 @@ export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, un
         className="mb-3 text-5xl drop-shadow-lg"
         style={{ color: guildColor }}
       >
-        {guild.icon?.startsWith("data:") ? (
-          <img src={guild.icon} alt="" className="h-12 w-12 object-contain drop-shadow-lg" />
-        ) : (
-          guild.icon || "⬡"
-        )}
+        <GuildIcon icon={guild.icon} className="h-12 w-12 object-contain drop-shadow-lg" />
       </div>
 
       {/* Name */}
@@ -122,8 +127,24 @@ export function GuildTile({ guild, username, isMember, isPinned, onTogglePin, un
   }
 
   return (
-    <div className={wrapperClass}>
-      {cardContent}
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setDetailsOpen(true)}
+        className={`${wrapperClass} cursor-pointer text-left`}
+      >
+        {cardContent}
+      </button>
+      {detailsOpen && (
+        <GuildDetailsModal
+          guild={guild}
+          onClose={() => setDetailsOpen(false)}
+          onAction={a => handleAction(a)}
+          acting={acting}
+          actionResult={actionResult}
+          isPending={isPending}
+        />
+      )}
+    </>
   )
 }

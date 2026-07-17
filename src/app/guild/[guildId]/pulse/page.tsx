@@ -1,5 +1,5 @@
 import { MessageCircle } from "lucide-react"
-import { ChamberHeader } from "@/components/shared"
+import { ChamberHeader, UnprovisionedChamber } from "@/components/shared"
 import { MessageList } from "@/components/pulse/MessageList"
 import { ChatInput } from "@/components/pulse/ChatInput"
 import { getGuild } from "@/lib/guilds"
@@ -14,12 +14,32 @@ interface PulsePageProps {
 export default async function PulsePage({ params }: PulsePageProps) {
   const { guildId } = await params
   const guild = await getGuild(guildId)
+  const user = await getUser()
 
-  if (!guild || !guild.resources.talkRoom) {
+  if (!guild) {
     notFound()
   }
 
-  const user = await getUser()
+  if (!guild.resources.talkRoom) {
+    return (
+      <div className="flex h-full flex-col p-6 lg:p-8">
+        <ChamberHeader
+          backHref={`/guild/${guildId}`}
+          icon={<MessageCircle className="h-10 w-10 text-guild" />}
+          title="The Chat"
+          subtitle={`Whispers of ${guild.name}`}
+        />
+        <UnprovisionedChamber
+          guildId={guildId}
+          spaceType="chat"
+          chamberLabel="chat room"
+          bodyLine="Chat is optional per guild. The seeder can open one now."
+          isSeeder={user?.username === guild.seederUid}
+        />
+      </div>
+    )
+  }
+
   const token = guild.resources.talkRoom
   const messages = await getMessages(token, 50)
 
@@ -33,7 +53,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
       />
 
       <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-dark bg-black">
-        <MessageList messages={messages} currentUser={user?.username} />
+        <MessageList messages={messages} currentUser={user?.username} token={token} />
         <ChatInput guildId={guildId} token={token} members={guild.members} />
       </div>
     </div>

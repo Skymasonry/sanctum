@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useLayoutEffect } from "react"
 import { Bell } from "lucide-react"
 import type { TalkMessage } from "@/lib/talk"
 import { cn } from "@/lib/utils"
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 interface MessageListProps {
   messages: TalkMessage[]
   currentUser?: string
+  token?: string
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -86,13 +87,79 @@ function MediaContent({ msg }: { msg: TalkMessage }) {
   )
 }
 
-export function MessageList({ messages, currentUser }: MessageListProps) {
+export function MessageList({ messages, currentUser, token }: MessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+  const pinToBottom = () => {
+    // Walk every ancestor of the sentinel; if it's a scrollable element,
+    // pin it to the bottom. Handles the case where the actual scroll
+    // container is a page-level ancestor (e.g. <main>) rather than the
+    // MessageList's own overflow-auto div.
+    const sentinel = bottomRef.current
+    if (!sentinel) return
+    let node: HTMLElement | null = sentinel.parentElement
+    while (node) {
+      const style = getComputedStyle(node)
+      if (
+        (style.overflowY === "auto" || style.overflowY === "scroll") &&
+        node.scrollHeight > node.clientHeight
+      ) {
+        node.scrollTop = node.scrollHeight
+      }
+      node = node.parentElement
     }
+    sentinel.scrollIntoView({ block: "end", behavior: "instant" as ScrollBehavior })
+  }
+
+  // Disable browser scroll restoration so it doesn't fight us on reload.
+  useEffect(() => {
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual"
+    }
+  }, [])
+
+  // Pin on messages change: sync pass, then post-paint passes to catch
+  // layout growth from avatars/media loading in.
+  useLayoutEffect(() => {
+    pinToBottom()
+    const raf1 = requestAnimationFrame(() => {
+      pinToBottom()
+      requestAnimationFrame(pinToBottom)
+    })
+    const t1 = setTimeout(pinToBottom, 100)
+    const t2 = setTimeout(pinToBottom, 500)
+    return () => {
+      cancelAnimationFrame(raf1)
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [messages])
+
+  // Mark the room as read once messages are visible. Talk's unread
+  // counter otherwise persists forever — the frontend has to POST
+  // the last-seen message id.
+  useEffect(() => {
+    if (!token || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (!last?.id) return
+    fetch(`/api/talk/${token}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lastReadMessage: last.id }),
+    }).catch(() => {})
+  }, [token, messages])
+
+  // Repin whenever any child image finishes loading (fires per-image).
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const handler = () => pinToBottom()
+    const imgs = el.querySelectorAll("img")
+    imgs.forEach(img => {
+      if (!img.complete) img.addEventListener("load", handler, { once: true })
+    })
+    return () => imgs.forEach(img => img.removeEventListener("load", handler))
   }, [messages])
 
   const visibleMessages = messages.filter(
@@ -206,6 +273,7 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
           </div>
         )
       })}
+      <div ref={bottomRef} aria-hidden />
     </div>
   )
 }

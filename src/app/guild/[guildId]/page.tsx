@@ -1,4 +1,7 @@
-import { ChamberHeader } from "@/components/shared"
+import Link from "next/link"
+import { Settings as SettingsIcon } from "lucide-react"
+
+import { ChamberHeader, GuildIcon } from "@/components/shared"
 import { FocusCard, EntryGrid } from "@/components/threshold"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
@@ -50,9 +53,19 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
 
   return (
     <GuildThresholdClient guild={guild} isSeeder={isSeeder}>
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <div className="relative flex h-full flex-col p-6 lg:p-8">
+        {isSeeder && (
+          <Link
+            href={`/guild/${guildId}/settings`}
+            className="absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full border border-gray-dark bg-black-light text-gray transition-colors hover:border-guild/50 hover:text-guild lg:right-8 lg:top-8"
+            title="Guild settings"
+            aria-label="Guild settings"
+          >
+            <SettingsIcon className="h-4 w-4" />
+          </Link>
+        )}
         <ChamberHeader
-          icon={guild.icon?.startsWith("data:") ? <img src={guild.icon} alt="" className="h-9 w-9 object-contain" /> : guild.icon}
+          icon={<GuildIcon icon={guild.icon} className="h-9 w-9 object-contain" />}
           title={guild.name}
           subtitle={guild.description}
           centered

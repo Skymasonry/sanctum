@@ -5,6 +5,15 @@ export interface GuildApplication {
   appliedAt: string
 }
 
+export type ChamberId =
+  | "pulse"
+  | "chamber"
+  | "rites"
+  | "quests"
+  | "scrolls"
+  | "archive"
+  | "brotherhood"
+
 export interface Guild {
   id: string
   name: string
@@ -22,6 +31,8 @@ export interface Guild {
   evolutionaryPurpose?: string
   createdAt: string
   circleId: string
+  /** Enabled chambers on the guild home grid. Seeder-controlled. */
+  chambers: ChamberId[]
   applicationForm?: {
     agreements: Array<{ id: number; text: string }>
   }

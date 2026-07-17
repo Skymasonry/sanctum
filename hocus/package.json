@@ -1,0 +1,17 @@
+{
+  "name": "sanctum-hocus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Y.js sync + persistence server for Sanctum live documents",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@hocuspocus/extension-logger": "^2.15.0",
+    "@hocuspocus/server": "^2.15.0",
+    "pg": "^8.13.0",
+    "yjs": "^13.6.20"
+  }
+}
