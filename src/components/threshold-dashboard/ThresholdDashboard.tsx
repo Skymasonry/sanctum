@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react"
 
 import type { ThresholdData } from "@/types/threshold"
 
-import { DashboardChamberGrid } from "./DashboardChamberGrid"
+import { GatheringsColumn } from "./GatheringsColumn"
 import { LiveBand } from "./LiveBand"
+import { StirringColumn } from "./StirringColumn"
 import { ThresholdHeader } from "./ThresholdHeader"
 
 interface ThresholdDashboardProps {
@@ -15,7 +16,8 @@ interface ThresholdDashboardProps {
 export function ThresholdDashboard({ initialData }: ThresholdDashboardProps) {
   const [data, setData] = useState<ThresholdData>(initialData)
 
-  // Poll every 30s so counts and live-band stay fresh without a manual refresh.
+  // Poll every 30s for live-band + counts freshness. Cheap since the endpoint
+  // returns only counts.
   useEffect(() => {
     const tick = () => {
       fetch("/api/threshold", { cache: "no-store" })
@@ -27,11 +29,18 @@ export function ThresholdDashboard({ initialData }: ThresholdDashboardProps) {
     return () => clearInterval(id)
   }, [])
 
-  const activeStirringCount = useMemo(
+  const activeStirring = useMemo(
     () =>
       data.stirring.filter(
         g => g.unreadMessages + g.newFiles + g.eventChanges + g.presentNow > 0,
-      ).length,
+      ),
+    [data.stirring],
+  )
+  const quietStirring = useMemo(
+    () =>
+      data.stirring.filter(
+        g => g.unreadMessages + g.newFiles + g.eventChanges + g.presentNow === 0,
+      ),
     [data.stirring],
   )
 
@@ -39,14 +48,15 @@ export function ThresholdDashboard({ initialData }: ThresholdDashboardProps) {
     <div className="flex flex-col">
       <ThresholdHeader
         member={data.member}
-        stirringCount={activeStirringCount}
+        stirringCount={activeStirring.length}
         gatheringsCount={data.gatherings.length}
       />
 
       {data.live.length > 0 && <LiveBand rooms={data.live} />}
 
-      <div className="px-10 pt-8">
-        <DashboardChamberGrid stirring={data.stirring} />
+      <div className="grid grid-cols-1 gap-9 px-10 pt-8 lg:grid-cols-2">
+        <StirringColumn active={activeStirring} quiet={quietStirring} />
+        <GatheringsColumn gatherings={data.gatherings} />
       </div>
     </div>
   )
