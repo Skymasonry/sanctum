@@ -1,8 +1,6 @@
-import { headers } from "next/headers"
-
 import { getUser } from "@/lib/auth"
-import { ThresholdDashboard } from "@/components/threshold-dashboard"
-import type { ThresholdData } from "@/types/threshold"
+import { HomePage } from "@/components/home/HomePage"
+import { getAllGuildsUnfiltered, getUserGuilds } from "@/lib/guilds"
 
 export const dynamic = "force-dynamic"
 
@@ -17,41 +15,28 @@ export default async function Home() {
     )
   }
 
-  const initialData = await fetchThreshold()
+  const [allGuilds, userGuilds] = await Promise.all([
+    getAllGuildsUnfiltered(),
+    getUserGuilds(),
+  ])
 
-  return <ThresholdDashboard initialData={initialData} />
-}
+  // Calendar sources for the HomePage's upcoming-events fetcher.
+  const guildCalendars = userGuilds
+    .filter(g => !!g.resources.calendarUri)
+    .map(g => ({
+      guildId: g.id,
+      guildName: g.name,
+      guildColor: g.color,
+      guildIcon: g.icon,
+      calendarUri: g.resources.calendarUri as string,
+    }))
 
-async function fetchThreshold(): Promise<ThresholdData> {
-  const headersList = await headers()
-  const host = headersList.get("host") || "localhost:3000"
-  const proto = headersList.get("x-forwarded-proto") || "https"
-  const cookie = headersList.get("cookie") || ""
-  const forward = {
-    "x-authentik-username": headersList.get("x-authentik-username") || "",
-    "x-authentik-groups": headersList.get("x-authentik-groups") || "",
-    "x-authentik-name": headersList.get("x-authentik-name") || "",
-    "x-authentik-email": headersList.get("x-authentik-email") || "",
-    cookie,
-  }
-  try {
-    const res = await fetch(`${proto}://${host}/api/threshold?touch=1`, {
-      headers: forward,
-      cache: "no-store",
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return (await res.json()) as ThresholdData
-  } catch (err) {
-    console.error("Failed to fetch /api/threshold:", err)
-    return {
-      member: {
-        name: "",
-        avatar: null,
-        lastSeen: null,
-      },
-      live: [],
-      stirring: [],
-      gatherings: [],
-    }
-  }
+  return (
+    <HomePage
+      user={user}
+      allGuilds={allGuilds}
+      userGuilds={userGuilds}
+      guildCalendars={guildCalendars}
+    />
+  )
 }

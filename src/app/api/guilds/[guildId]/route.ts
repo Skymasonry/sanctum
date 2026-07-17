@@ -1,6 +1,8 @@
 import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
-import http from "http"
+import http, { type RequestOptions } from "http"
+
+import { getGuild } from "@/lib/guilds"
 
 const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80"
 
@@ -17,11 +19,25 @@ async function getAuthHeaders() {
   }
 }
 
-function ncRequest(method: string, path: string, authHeaders: Record<string, string>, body?: string): Promise<any> {
+async function requireSeeder(
+  guildId: string,
+  callerUsername: string,
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const guild = await getGuild(guildId)
+  if (!guild) {
+    return { ok: false, response: NextResponse.json({ error: "Not found" }, { status: 404 }) }
+  }
+  if (callerUsername.toLowerCase() !== guild.seederUid.toLowerCase()) {
+    return { ok: false, response: NextResponse.json({ error: "Seeder only" }, { status: 403 }) }
+  }
+  return { ok: true }
+}
+
+function ncRequest(method: string, path: string, authHeaders: Record<string, string>, body?: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const url = new URL(NEXTCLOUD_URL)
     const bodyBuf = body ? Buffer.from(body) : null
-    const reqOptions: any = {
+    const reqOptions: RequestOptions = {
       hostname: url.hostname,
       port: Number(url.port) || 80,
       path,
@@ -32,9 +48,9 @@ function ncRequest(method: string, path: string, authHeaders: Record<string, str
         ...authHeaders,
       },
     }
-    if (bodyBuf) {
-      reqOptions.headers["Content-Type"] = "application/json"
-      reqOptions.headers["Content-Length"] = bodyBuf.length
+    if (bodyBuf && reqOptions.headers) {
+      ;(reqOptions.headers as Record<string, string | number>)["Content-Type"] = "application/json"
+      ;(reqOptions.headers as Record<string, string | number>)["Content-Length"] = bodyBuf.length
     }
     const req = http.request(reqOptions, (res) => {
       let data = ""
@@ -60,47 +76,90 @@ export async function POST(
   const auth = await getAuthHeaders()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { guildId } = await params
+  const username = auth["X-Authentik-Username"]
+
+  const url = new URL(request.url)
+  const action = url.searchParams.get("action")
+  if (!action) {
+    return NextResponse.json({ error: "Action required" }, { status: 400 })
+  }
+
+  const { addMember, applyToGuild, approveApplication, joinGuild, rejectApplication, removeMember } =
+    await import("@/lib/guild-writes")
 
   try {
-    const url = new URL(request.url)
-    const action = url.searchParams.get("action")
-
-    if (!action) {
-      return NextResponse.json({ error: "Action required" }, { status: 400 })
-    }
-
-    let path = ""
-    let body: string | undefined
-
-    if (action === "approve" || action === "reject") {
-      const requestBody = await request.json().catch(() => ({}))
-      const memberId = requestBody.memberId
-      if (!memberId) {
-        return NextResponse.json({ error: "memberId required" }, { status: 400 })
+    switch (action) {
+      case "join": {
+        const ok = await joinGuild(guildId, username, auth)
+        return NextResponse.json({ success: ok })
       }
-      path = `/apps/skymasonsnav/api/orders/${guildId}/members/${memberId}/${action}`
-    } else {
-      switch (action) {
-        case "join":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/join`
-          break
-        case "apply":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/apply`
-          break
-        case "leave":
-          path = `/apps/skymasonsnav/api/orders/${guildId}/leave`
-          break
-        default:
-          return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+      case "leave": {
+        const ok = await removeMember(guildId, username, auth)
+        return NextResponse.json({ success: ok })
       }
+      case "apply": {
+        const body = await request.json().catch(() => ({} as { message?: string; agreements?: Array<{ id: number; text: string; agreed?: boolean }> }))
+        const ok = await applyToGuild(guildId, username, body.message ?? "", body.agreements ?? [])
+        return NextResponse.json({ success: ok })
+      }
+      case "approve":
+      case "reject": {
+        const gate = await requireSeeder(guildId, username)
+        if (!gate.ok) return gate.response
+        const body = (await request.json().catch(() => ({}))) as { memberId?: string }
+        if (!body.memberId) {
+          return NextResponse.json({ error: "memberId required" }, { status: 400 })
+        }
+        const ok = action === "approve"
+          ? await approveApplication(guildId, body.memberId, auth)
+          : await rejectApplication(guildId, body.memberId)
+        if (!ok) {
+          return NextResponse.json({ error: "Application not found" }, { status: 404 })
+        }
+        return NextResponse.json({ success: ok })
+      }
+      case "invite": {
+        const gate = await requireSeeder(guildId, username)
+        if (!gate.ok) return gate.response
+        const body = (await request.json().catch(() => ({}))) as { members?: string[] }
+        const added: string[] = []
+        for (const m of body.members ?? []) {
+          if (await addMember(guildId, m, auth)) added.push(m)
+        }
+        return NextResponse.json({ success: true, added })
+      }
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
-
-    const data = await ncRequest("POST", path, auth, body)
-    return NextResponse.json(data)
   } catch (error) {
-    console.error(`Failed guild action:`, error)
+    console.error("Failed guild action:", error)
     return NextResponse.json({ error: "Action failed" }, { status: 500 })
   }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ guildId: string }> },
+) {
+  const auth = await getAuthHeaders()
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { guildId } = await params
+
+  const gate = await requireSeeder(guildId, auth["X-Authentik-Username"])
+  if (!gate.ok) return gate.response
+
+  const { updateGuildInfo } = await import("@/lib/guild-writes")
+
+  const body = (await request.json().catch(() => ({}))) as {
+    name?: string
+    description?: string
+    icon?: string
+    color?: string
+    admission?: "open" | "closed" | "mandatory"
+  }
+  const ok = await updateGuildInfo(guildId, body)
+  if (!ok) return NextResponse.json({ error: "Nothing to update" }, { status: 400 })
+  return NextResponse.json({ ok: true })
 }
 
 export async function PUT(

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { X } from "lucide-react"
+import { GuildIcon } from "@/components/shared"
 
 import type { Guild } from "@/types/guild"
 
@@ -53,12 +54,8 @@ export function GuildDetailsModal({
         </button>
 
         <div className="border-b border-gray-dark px-6 py-6 text-center">
-          <div className="mb-3 text-5xl drop-shadow-lg" style={{ color }}>
-            {guild.icon?.startsWith("data:") ? (
-              <img src={guild.icon} alt="" className="mx-auto h-12 w-12 object-contain" />
-            ) : (
-              guild.icon || "⬡"
-            )}
+          <div className="mb-3 text-5xl drop-shadow-lg">
+            <GuildIcon icon={guild.icon} color={color} className="mx-auto h-12 w-12 object-contain" />
           </div>
           <h2 className="font-display text-2xl tracking-wide" style={{ color }}>
             {guild.name}

@@ -10,6 +10,14 @@
   },
   "dependencies": {
     "@auth/core": "^0.41.0",
+    "@aws-sdk/client-s3": "^3.1086.0",
+    "@aws-sdk/s3-request-presigner": "^3.1086.0",
+    "@hocuspocus/provider": "^2.15.3",
+    "@tiptap/extension-collaboration": "^2.27.2",
+    "@tiptap/extension-collaboration-cursor": "^2.26.2",
+    "@tiptap/extension-text-style": "^2.27.2",
+    "@tiptap/react": "^2.27.2",
+    "@tiptap/starter-kit": "^2.27.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.29.2",
@@ -17,14 +25,17 @@
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "next-pwa": "^5.6.0",
+    "pg": "^8.22.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "swr": "^2.3.8",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "yjs": "^13.6.31"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

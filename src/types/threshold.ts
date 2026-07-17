@@ -25,6 +25,10 @@ export interface StirringGuild {
   newFiles: number
   eventChanges: number
   presentNow: number
+  /** Open quests due within a week (or already overdue), not yet completed. */
+  openQuests: number
+  /** Published scrolls the current user hasn't submitted yet. */
+  pendingScrolls: number
 }
 
 export type RsvpState = "going" | "declined" | null

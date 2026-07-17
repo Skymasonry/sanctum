@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 interface MessageListProps {
   messages: TalkMessage[]
   currentUser?: string
+  token?: string
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -86,7 +87,7 @@ function MediaContent({ msg }: { msg: TalkMessage }) {
   )
 }
 
-export function MessageList({ messages, currentUser }: MessageListProps) {
+export function MessageList({ messages, currentUser, token }: MessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -134,6 +135,20 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
       clearTimeout(t2)
     }
   }, [messages])
+
+  // Mark the room as read once messages are visible. Talk's unread
+  // counter otherwise persists forever — the frontend has to POST
+  // the last-seen message id.
+  useEffect(() => {
+    if (!token || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (!last?.id) return
+    fetch(`/api/talk/${token}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lastReadMessage: last.id }),
+    }).catch(() => {})
+  }, [token, messages])
 
   // Repin whenever any child image finishes loading (fires per-image).
   useEffect(() => {

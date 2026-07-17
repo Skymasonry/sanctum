@@ -1,0 +1,50 @@
+/**
+ * Unified renderer for `guild.icon`. The field can be:
+ *   - an emoji character (legacy path)
+ *   - a base64 data: URL (legacy in-DB uploads)
+ *   - an https URL (new S3-hosted guild icons)
+ *
+ * All three render into the same visual slot so guild badges keep
+ * working across sidebar, cards, and chamber headers as we migrate.
+ *
+ * Sizing note: emoji characters render at the caller's *text size*,
+ * not the h-/w- classes; SVGs render at exactly h-/w-. So in surfaces
+ * where the parent text size is big (text-2xl / text-4xl), callers
+ * need to pass an h-/w- class that matches — or SVGs will look
+ * visibly smaller than the emojis they replaced.
+ */
+interface GuildIconProps {
+  icon?: string | null
+  /** Tailwind sizing class(es), e.g. "h-5 w-5 object-contain" */
+  className?: string
+  /** Only applied when rendering an emoji character */
+  color?: string
+  /** Emoji fallback when guild has no icon set */
+  fallback?: string
+}
+
+function isImageIcon(icon: string | null | undefined): icon is string {
+  if (!icon) return false
+  return icon.startsWith("data:") || icon.startsWith("http")
+}
+
+export function GuildIcon({ icon, className, color, fallback = "⬡" }: GuildIconProps) {
+  if (isImageIcon(icon)) {
+    return <img src={icon} alt="" className={className} />
+  }
+  // inline-flex + items-center + justify-center + leading-none centres
+  // the glyph inside the caller's sized box; without this the
+  // character sits at the top-left because it's positioned by text
+  // baseline, not by the box.
+  return (
+    <span
+      className={
+        (className ? className + " " : "") +
+        "inline-flex items-center justify-center leading-none"
+      }
+      style={color ? { color } : undefined}
+    >
+      {icon || fallback}
+    </span>
+  )
+}

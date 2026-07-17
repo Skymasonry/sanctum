@@ -33,7 +33,7 @@ export function ChamberHeader({ icon, title, subtitle, meta, centered = false, b
       {backHref && (
         <Link
           href={backHref}
-          className="mb-3 inline-flex items-center gap-1 text-sm text-gray transition-colors hover:text-guild"
+          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-gray-dark bg-black-light px-3.5 py-1.5 text-sm font-medium text-gray-light transition-colors hover:border-guild/60 hover:bg-guild/10 hover:text-guild"
         >
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
