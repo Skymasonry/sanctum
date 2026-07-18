@@ -20,7 +20,7 @@ export function Header({ user }: HeaderProps) {
   if (!user) return null
 
   return (
-    <header className="glass rounded-2xl flex h-12 shrink-0 items-center justify-end gap-4 px-5">
+    <header className="flex h-12 shrink-0 items-center justify-end gap-4 px-5">
       <span className="rounded border border-gold/30 px-1.5 py-0.5 text-[10px] tracking-wider text-gold/60">neo</span>
       <Link
         href="/settings"

@@ -118,10 +118,10 @@
 
 @layer components {
   .glass {
-    background: rgba(16, 11, 6, 0.72);
+    background: rgba(16, 11, 6, 0.68);
     -webkit-backdrop-filter: blur(28px) saturate(160%);
     backdrop-filter: blur(28px) saturate(160%);
-    border: 1px solid rgba(201, 162, 39, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .glass-subtle {

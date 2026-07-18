@@ -35,7 +35,7 @@ export default async function RootLayout({
       <body className="flex h-dvh overflow-hidden p-3 gap-3">
         <ServiceWorkerRegistration />
         <Sidebar guilds={guilds} />
-        <div className="flex flex-1 flex-col gap-3 min-w-0 overflow-hidden">
+        <div className="flex flex-1 flex-col gap-0 min-w-0 overflow-hidden">
           <Header user={user ? { username: user.username, name: user.name } : null} />
           <main className="custom-scrollbar glass rounded-2xl flex-1 overflow-y-auto">
             {children}
