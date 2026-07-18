@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
-import { Compass, Plus } from "lucide-react"
+import { Compass, Plus, ExternalLink, MessageSquare, Scroll } from "lucide-react"
 import { GuildIcon } from "@/components/shared"
 import { cn } from "@/lib/utils"
 import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
@@ -14,6 +14,7 @@ import { InviteButton } from "./InviteButton"
 
 const PINNED_GUILD = "The Brotherhood"
 const STORAGE_KEY = "guild-access-order"
+const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
 
 interface SidebarProps {
   guilds: Guild[]
@@ -40,12 +41,10 @@ export function Sidebar({ guilds }: SidebarProps) {
   const [accessOrder, setAccessOrder] = useState<string[]>([])
   const signals = useThresholdSignals()
 
-  // Load access order from localStorage on mount
   useEffect(() => {
     setAccessOrder(getAccessOrder())
   }, [])
 
-  // Record access when guild changes
   useEffect(() => {
     if (currentGuildId) {
       const guild = guilds.find((g) => g.id === currentGuildId)
@@ -57,10 +56,8 @@ export function Sidebar({ guilds }: SidebarProps) {
   }, [currentGuildId, guilds])
 
   const sortedGuilds = [...guilds].sort((a, b) => {
-    // Pin The Brotherhood to top
     if (a.name === PINNED_GUILD) return -1
     if (b.name === PINNED_GUILD) return 1
-    // Then sort by recent access
     const aIdx = accessOrder.indexOf(a.id)
     const bIdx = accessOrder.indexOf(b.id)
     if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx
@@ -70,26 +67,26 @@ export function Sidebar({ guilds }: SidebarProps) {
   })
 
   return (
-    <aside className="flex h-screen w-[72px] flex-col items-center border-r border-gray-dark bg-black-deep py-4">
+    <aside className="glass rounded-2xl flex h-full w-[68px] shrink-0 flex-col items-center py-4">
       {/* Logo */}
       <Link
         href="/"
-        className="mb-6 flex h-12 w-12 items-center justify-center transition-opacity hover:opacity-80"
+        className="mb-5 flex h-10 w-10 items-center justify-center transition-opacity hover:opacity-80"
       >
         <Image
           src="/logo.jpg"
           alt="Skymasons"
-          width={40}
-          height={40}
+          width={36}
+          height={36}
           className="rounded-full"
         />
       </Link>
 
       {/* Divider */}
-      <div className="mb-4 h-px w-8 bg-gray-dark" />
+      <div className="mb-4 h-px w-8 bg-white/10" />
 
       {/* Guild Icons */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
+      <nav className="flex flex-1 flex-col items-center gap-1.5 overflow-y-auto custom-scrollbar">
         <LayoutGroup>
           {sortedGuilds.map((guild) => (
             <SidebarItem
@@ -103,35 +100,33 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-ember/15 text-ember/80 transition-all duration-150",
-            "hover:scale-110 hover:bg-ember/25 hover:text-ember",
-            pathname === "/create-guild" && "bg-ember/25 text-ember",
+            "mt-1 flex h-10 w-10 items-center justify-center rounded-xl text-ember/70 transition-all duration-150",
+            "hover:scale-110 hover:bg-white/05 hover:text-ember",
+            pathname === "/create-guild" && "bg-white/08 text-ember",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
         >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
+          <Plus className="h-4 w-4" strokeWidth={2.5} />
         </Link>
         <Link
           href="/discover"
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15 text-gold/80 transition-all duration-150",
-            "hover:scale-110 hover:bg-gold/25 hover:text-gold",
-            pathname === "/discover" && "bg-gold/25 text-gold",
+            "flex h-10 w-10 items-center justify-center rounded-xl text-gold/60 transition-all duration-150",
+            "hover:scale-110 hover:bg-white/05 hover:text-gold",
+            pathname === "/discover" && "bg-white/08 text-gold",
           )}
           title="Discover guilds"
           aria-label="Discover guilds"
         >
-          <Compass className="h-5 w-5" strokeWidth={2.5} />
+          <Compass className="h-4 w-4" strokeWidth={2.5} />
         </Link>
       </nav>
 
       {/* Bottom actions */}
       <div className="mt-4 flex flex-col items-center gap-2">
-        <div className="mb-2 h-px w-8 bg-gray-dark" />
-        <div className="group relative">
-          <InviteButton />
-        </div>
+        <div className="mb-2 h-px w-8 bg-white/10" />
+        <InviteButton />
       </div>
     </aside>
   )
@@ -150,12 +145,12 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
 
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
-    openTimer.current = setTimeout(() => setOpen(true), 400)
+    openTimer.current = setTimeout(() => setOpen(true), 350)
   }
 
   function handleMouseLeave() {
     if (openTimer.current) clearTimeout(openTimer.current)
-    closeTimer.current = setTimeout(() => setOpen(false), 100)
+    closeTimer.current = setTimeout(() => setOpen(false), 150)
   }
 
   return (
@@ -170,24 +165,24 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
       <Link
         href={`/guild/${guild.id}`}
         className={cn(
-          "relative flex h-12 w-12 items-center justify-center rounded-xl text-2xl transition-all duration-150",
-          "hover:scale-110 hover:bg-black-light",
-          isActive && "bg-black-light"
+          "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
+          "hover:scale-110 hover:bg-white/08",
+          isActive && "bg-white/08"
         )}
         style={{
-          boxShadow: isActive ? `inset 0 0 0 2px ${guild.color}` : "none",
+          boxShadow: isActive ? `inset 0 0 0 1.5px ${guild.color}40` : "none",
         }}
         title={guild.name}
       >
         {isActive && (
           <motion.div
             layoutId="active-pip"
-            className="absolute -left-[5px] top-1/2 h-6 w-1.5 -translate-y-1/2 rounded-full"
+            className="absolute -left-[5px] top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
             style={{ backgroundColor: guild.color }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
-        <GuildIcon icon={guild.icon} color={guild.color} className="h-8 w-8 object-contain" />
+        <GuildIcon icon={guild.icon} color={guild.color} className="h-7 w-7 object-contain" />
 
         {signal?.isLive ? (
           <span
@@ -203,19 +198,57 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
         ) : null}
       </Link>
 
-      {/* Hover name-only tooltip */}
+      {/* Hover submenu */}
       <div
         className={cn(
-          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-2 transition-all duration-150",
-          open ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0",
+          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-3 transition-all duration-200",
+          open ? "pointer-events-auto translate-x-0 opacity-100" : "-translate-x-2 opacity-0",
         )}
       >
-        <div className="rounded-md border border-gray-dark bg-black px-2.5 py-1.5 shadow-xl">
-          <div
-            className="whitespace-nowrap text-xs font-medium tracking-wider"
-            style={{ color: guild.color }}
-          >
-            {guild.name}
+        <div
+          className="w-44 overflow-hidden rounded-xl shadow-2xl"
+          style={{
+            background: "rgba(12, 8, 4, 0.90)",
+            backdropFilter: "blur(24px) saturate(160%)",
+            WebkitBackdropFilter: "blur(24px) saturate(160%)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {/* Guild name header */}
+          <div className="border-b border-white/06 px-3 py-2.5">
+            <p
+              className="font-display text-xs font-semibold tracking-wider"
+              style={{ color: guild.color }}
+            >
+              {guild.name}
+            </p>
+          </div>
+
+          {/* Links */}
+          <div className="p-1">
+            <a
+              href={CHAMBER_HREF(guild.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+            >
+              <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+              The Chamber
+            </a>
+            <Link
+              href={`/guild/${guild.id}/pulse`}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+            >
+              <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
+              The Chat
+            </Link>
+            <Link
+              href={`/guild/${guild.id}/rites`}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+            >
+              <Scroll className="h-3 w-3 shrink-0 opacity-60" />
+              Rites
+            </Link>
           </div>
         </div>
       </div>
