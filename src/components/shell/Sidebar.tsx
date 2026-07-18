@@ -100,26 +100,26 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-10 w-10 items-center justify-center rounded-xl text-ember/70 transition-all duration-150",
-            "hover:scale-110 hover:bg-white/05 hover:text-ember",
+            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl text-ember/70 transition-all duration-150",
+            "hover:scale-110 hover:bg-white/08 hover:text-ember",
             pathname === "/create-guild" && "bg-white/08 text-ember",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
         </Link>
         <Link
           href="/discover"
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl text-gold/60 transition-all duration-150",
-            "hover:scale-110 hover:bg-white/05 hover:text-gold",
+            "flex h-11 w-11 items-center justify-center rounded-xl text-gold/60 transition-all duration-150",
+            "hover:scale-110 hover:bg-white/08 hover:text-gold",
             pathname === "/discover" && "bg-white/08 text-gold",
           )}
           title="Discover guilds"
           aria-label="Discover guilds"
         >
-          <Compass className="h-4 w-4" strokeWidth={2.5} />
+          <Compass className="h-5 w-5" strokeWidth={2.5} />
         </Link>
       </nav>
 
