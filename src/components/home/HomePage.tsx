@@ -131,7 +131,7 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
         <p className="mb-0.5 text-[10px] font-medium uppercase tracking-[0.25em] text-gold/50">
           Per aspera ad astra
         </p>
-        <h1 className="font-display text-2xl font-medium tracking-wide text-white/90">
+        <h1 className="font-display text-2xl font-medium tracking-wide" style={{ color: "pink" }}>
           The Hearth
         </h1>
       </div>
