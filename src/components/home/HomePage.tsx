@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
-  Calendar, Shield, Loader2, Search, Sparkles, ChevronDown, ChevronUp, ChevronRight,
+  Calendar, Shield, Loader2, Search, Sparkles, ChevronDown, ChevronUp, ChevronRight, MessageSquare,
 } from "lucide-react"
 import type { Guild } from "@/types/guild"
 import type { User } from "@/lib/auth"
@@ -43,6 +43,7 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
   const [loadingEvents, setLoadingEvents] = useState(true)
   const [showAllEvents, setShowAllEvents] = useState(false)
   const [unreadByGuildId, setUnreadByGuildId] = useState<Record<string, number>>({})
+  const [lastActivityByGuildId, setLastActivityByGuildId] = useState<Record<string, number>>({})
   const [showCreateGuild, setShowCreateGuild] = useState(false)
   const [search, setSearch] = useState("")
   const [tab, setTab] = useState<"my" | "discover">("my")
@@ -102,14 +103,17 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
     fetch("/api/talk/rooms")
       .then((r) => r.ok ? r.json() : [])
       .then((rooms: TalkRoom[]) => {
-        const map: Record<string, number> = {}
+        const unread: Record<string, number> = {}
+        const activity: Record<string, number> = {}
         for (const room of rooms) {
           const guildId = tokenToGuildId[room.token]
-          if (guildId && room.unreadMessages > 0) {
-            map[guildId] = room.unreadMessages
+          if (guildId) {
+            if (room.unreadMessages > 0) unread[guildId] = room.unreadMessages
+            activity[guildId] = room.lastActivity
           }
         }
-        setUnreadByGuildId(map)
+        setUnreadByGuildId(unread)
+        setLastActivityByGuildId(activity)
       })
       .catch(() => {})
   }, [userGuilds])
@@ -140,6 +144,59 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
           <p className="mb-6 text-sm text-gray-light">
             Welcome back, <span className="text-white">{user.name || user.username}</span>
           </p>
+
+          {/* The Pulse — recent chats */}
+          {userGuilds.some((g) => g.resources.talkRoom) && (
+            <section className="mb-8">
+              <div className="mb-3 flex items-center gap-2.5">
+                <MessageSquare className="h-4 w-4 text-gold/70" />
+                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-gold/70">
+                  The Pulse
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {userGuilds
+                  .filter((g) => g.resources.talkRoom)
+                  .sort((a, b) => (lastActivityByGuildId[b.id] || 0) - (lastActivityByGuildId[a.id] || 0))
+                  .map((guild) => {
+                    const unread = unreadByGuildId[guild.id] || 0
+                    const lastActivity = lastActivityByGuildId[guild.id]
+                    const ago = lastActivity ? formatAgo(lastActivity) : null
+                    return (
+                      <Link
+                        key={guild.id}
+                        href={`/guild/${guild.id}/pulse`}
+                        className="group flex items-center gap-2.5 rounded-xl border border-white/06 bg-white/02 px-3.5 py-2.5 transition-all hover:border-white/12 hover:bg-white/05"
+                      >
+                        <span className="text-base leading-none"
+                          style={{ color: guild.color }}
+                        >
+                          {guild.icon?.startsWith("data:") ? (
+                            <img src={guild.icon} alt="" className="h-5 w-5 object-contain" />
+                          ) : guild.icon || "⬡"}
+                        </span>
+                        <div>
+                          <p className="text-xs font-medium text-white/80 group-hover:text-white">
+                            {guild.name}
+                          </p>
+                          {ago && (
+                            <p className="text-[10px] text-gray/60">{ago}</p>
+                          )}
+                        </div>
+                        {unread > 0 && (
+                          <span
+                            className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-black"
+                            style={{ backgroundColor: guild.color }}
+                          >
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+              </div>
+            </section>
+          )}
 
           {/* Guilds */}
           <section>
@@ -251,6 +308,14 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
       )}
     </div>
   )
+}
+
+function formatAgo(timestamp: number): string {
+  const diff = Math.floor(Date.now() / 1000) - timestamp
+  if (diff < 60) return "just now"
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
 }
 
 function EventRow({ event }: { event: UpcomingEvent }) {
