@@ -2,13 +2,24 @@ import http from "http"
 import { headers } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
-function getAuthHeaders(headersList: Headers): Record<string, string> | null {
-  const username = headersList.get("x-authentik-username")
-  if (!username) return null
+function getUser(headersList: Headers): string | null {
+  return headersList.get("x-authentik-username")
+}
+
+function authentikHeaders(headersList: Headers): Record<string, string> {
   return {
-    "X-Authentik-Username": username,
+    "X-Authentik-Username": headersList.get("x-authentik-username") || "",
     "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
     "X-Authentik-Name": headersList.get("x-authentik-name") || "",
+  }
+}
+
+function adminAuthHeaders(headersList: Headers): Record<string, string> {
+  const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
+  const token = Buffer.from(`admin:${password}`).toString("base64")
+  return {
+    Authorization: `Basic ${token}`,
+    ...authentikHeaders(headersList),
   }
 }
 
@@ -17,7 +28,7 @@ function nextcloudRequest(
   path: string,
   authHeaders: Record<string, string>,
   body?: string
-): Promise<{ status: number; data: any }> {
+): Promise<{ status: number; data: unknown }> {
   return new Promise((resolve, reject) => {
     const reqHeaders: Record<string, string> = {
       Accept: "application/json",
@@ -53,8 +64,7 @@ export async function PUT(
   { params }: { params: Promise<{ calendarUri: string; eventUid: string }> }
 ) {
   const headersList = await headers()
-  const authHeaders = getAuthHeaders(headersList)
-  if (!authHeaders) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!getUser(headersList)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { calendarUri, eventUid } = await params
 
@@ -63,7 +73,7 @@ export async function PUT(
     const { status, data } = await nextcloudRequest(
       "PUT",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events/${eventUid}`,
-      authHeaders,
+      adminAuthHeaders(headersList),
       JSON.stringify(body)
     )
     return NextResponse.json(data, { status })
@@ -78,8 +88,7 @@ export async function DELETE(
   { params }: { params: Promise<{ calendarUri: string; eventUid: string }> }
 ) {
   const headersList = await headers()
-  const authHeaders = getAuthHeaders(headersList)
-  if (!authHeaders) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!getUser(headersList)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { calendarUri, eventUid } = await params
 
@@ -87,7 +96,7 @@ export async function DELETE(
     const { status, data } = await nextcloudRequest(
       "DELETE",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events/${eventUid}`,
-      authHeaders
+      adminAuthHeaders(headersList)
     )
     return NextResponse.json(data, { status })
   } catch (error) {
