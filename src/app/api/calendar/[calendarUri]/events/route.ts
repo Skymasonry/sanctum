@@ -82,7 +82,7 @@ export async function GET(
     const { status, data } = await nextcloudRequest(
       "GET",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events${qs ? `?${qs}` : ""}`,
-      authentikHeaders(headersList)
+      adminAuthHeaders(headersList)
     )
     return NextResponse.json(data, { status })
   } catch (error) {
