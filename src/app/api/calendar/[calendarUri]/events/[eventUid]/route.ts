@@ -14,16 +14,15 @@ function authentikHeaders(headersList: Headers): Record<string, string> {
   }
 }
 
-function adminAuthHeaders(headersList: Headers): Record<string, string> {
+function adminWriteHeaders(headersList: Headers): Record<string, string> {
   const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
   const token = Buffer.from(`admin:${password}`).toString("base64")
-  const realUser = headersList.get("x-authentik-username") || ""
   return {
     Authorization: `Basic ${token}`,
     "X-Authentik-Username": "admin",
     "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
     "X-Authentik-Name": "Administrator",
-    "X-Real-Username": realUser,
+    "X-Real-Username": headersList.get("x-authentik-username") || "",
   }
 }
 
@@ -77,7 +76,7 @@ export async function PUT(
     const { status, data } = await nextcloudRequest(
       "PUT",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events/${eventUid}`,
-      adminAuthHeaders(headersList),
+      adminWriteHeaders(headersList),
       JSON.stringify(body)
     )
     return NextResponse.json(data, { status })
@@ -100,7 +99,7 @@ export async function DELETE(
     const { status, data } = await nextcloudRequest(
       "DELETE",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events/${eventUid}`,
-      adminAuthHeaders(headersList)
+      adminWriteHeaders(headersList)
     )
     return NextResponse.json(data, { status })
   } catch (error) {
