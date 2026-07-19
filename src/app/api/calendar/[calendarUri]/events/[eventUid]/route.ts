@@ -17,9 +17,13 @@ function authentikHeaders(headersList: Headers): Record<string, string> {
 function adminAuthHeaders(headersList: Headers): Record<string, string> {
   const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
   const token = Buffer.from(`admin:${password}`).toString("base64")
+  const realUser = headersList.get("x-authentik-username") || ""
   return {
     Authorization: `Basic ${token}`,
-    ...authentikHeaders(headersList),
+    "X-Authentik-Username": "admin",
+    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
+    "X-Authentik-Name": "Administrator",
+    "X-Real-Username": realUser,
   }
 }
 

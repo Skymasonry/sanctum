@@ -14,16 +14,20 @@ function authentikHeaders(headersList: Headers): Record<string, string> {
   }
 }
 
-// Admin Basic Auth for write operations — guild calendars are owned by admin.
-// Authentik-only users have no Nextcloud account so their username can't
-// resolve a CalDAV principal. We still forward X-Authentik-Username so the
-// PHP layer knows who initiated the request.
+// Write operations proxy as admin — guild calendars are owned by admin and
+// Authentik-only users have no Nextcloud principal. We send admin as the
+// Authentik username so the PHP CalDAV lookup succeeds, and carry the real
+// user in X-Real-Username for attribution if the PHP wants it.
 function adminAuthHeaders(headersList: Headers): Record<string, string> {
   const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
   const token = Buffer.from(`admin:${password}`).toString("base64")
+  const realUser = headersList.get("x-authentik-username") || ""
   return {
     Authorization: `Basic ${token}`,
-    ...authentikHeaders(headersList),
+    "X-Authentik-Username": "admin",
+    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
+    "X-Authentik-Name": "Administrator",
+    "X-Real-Username": realUser,
   }
 }
 
