@@ -2,14 +2,28 @@ import http from "http"
 import { headers } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
-function getAuthHeaders(headersList: Headers): Record<string, string> | null {
-  const username = headersList.get("x-authentik-username")
-  if (!username) return null
+function getUser(headersList: Headers): string | null {
+  return headersList.get("x-authentik-username")
+}
 
+function authentikHeaders(headersList: Headers): Record<string, string> {
   return {
-    "X-Authentik-Username": username,
+    "X-Authentik-Username": headersList.get("x-authentik-username") || "",
     "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
     "X-Authentik-Name": headersList.get("x-authentik-name") || "",
+  }
+}
+
+// Admin Basic Auth for write operations — guild calendars are owned by admin.
+// Authentik-only users have no Nextcloud account so their username can't
+// resolve a CalDAV principal. We still forward X-Authentik-Username so the
+// PHP layer knows who initiated the request.
+function adminAuthHeaders(headersList: Headers): Record<string, string> {
+  const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
+  const token = Buffer.from(`admin:${password}`).toString("base64")
+  return {
+    Authorization: `Basic ${token}`,
+    ...authentikHeaders(headersList),
   }
 }
 
@@ -18,27 +32,19 @@ function nextcloudRequest(
   path: string,
   authHeaders: Record<string, string>,
   body?: string
-): Promise<{ status: number; data: any }> {
+): Promise<{ status: number; data: unknown }> {
   return new Promise((resolve, reject) => {
     const reqHeaders: Record<string, string> = {
       Accept: "application/json",
       Host: "brothers.skymasons.xyz",
       ...authHeaders,
     }
-
     if (body) {
       reqHeaders["Content-Type"] = "application/json"
       reqHeaders["Content-Length"] = String(Buffer.byteLength(body))
     }
-
     const req = http.request(
-      {
-        hostname: "nextcloud",
-        port: 80,
-        path,
-        method,
-        headers: reqHeaders,
-      },
+      { hostname: "nextcloud", port: 80, path, method, headers: reqHeaders },
       (res) => {
         let data = ""
         res.on("data", (chunk) => (data += chunk))
@@ -51,7 +57,6 @@ function nextcloudRequest(
         })
       }
     )
-
     req.on("error", reject)
     if (body) req.write(body)
     req.end()
@@ -59,24 +64,22 @@ function nextcloudRequest(
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ calendarUri: string }> }
 ) {
   const headersList = await headers()
-  const authHeaders = getAuthHeaders(headersList)
-  if (!authHeaders) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  if (!getUser(headersList)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { calendarUri } = await params
+  const url = new URL(request.url)
 
   try {
+    const qs = url.searchParams.toString()
     const { status, data } = await nextcloudRequest(
       "GET",
-      `/apps/skymasonsnav/api/calendar/${calendarUri}/events`,
-      authHeaders
+      `/apps/skymasonsnav/api/calendar/${calendarUri}/events${qs ? `?${qs}` : ""}`,
+      authentikHeaders(headersList)
     )
-
     return NextResponse.json(data, { status })
   } catch (error) {
     console.error("Failed to fetch calendar events:", error)
@@ -89,10 +92,7 @@ export async function POST(
   { params }: { params: Promise<{ calendarUri: string }> }
 ) {
   const headersList = await headers()
-  const authHeaders = getAuthHeaders(headersList)
-  if (!authHeaders) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  if (!getUser(headersList)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { calendarUri } = await params
 
@@ -101,10 +101,9 @@ export async function POST(
     const { status, data } = await nextcloudRequest(
       "POST",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events`,
-      authHeaders,
+      adminAuthHeaders(headersList),
       JSON.stringify(body)
     )
-
     return NextResponse.json(data, { status })
   } catch (error) {
     console.error("Failed to create calendar event:", error)
