@@ -36,7 +36,7 @@ interface HomePageProps {
 
 const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
 
-export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePageProps) {
+export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalendars }: HomePageProps) {
   const [events, setEvents] = useState<UpcomingEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
   const [openEventKey, setOpenEventKey] = useState<string | null>(null)
@@ -68,14 +68,14 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
         guildCalendars.map(async (gc) => {
           const res = await fetch(`/api/calendar/${gc.calendarUri}/events?from=${from}&to=${to}`)
           if (!res.ok) return []
-          const data = await res.json()
-          return (Array.isArray(data) ? data : []).map((e: any) => ({
-            ...e,
+          const data = (await res.json()) as unknown[]
+          return (Array.isArray(data) ? data : []).map((e) => ({
+            ...(e as object),
             guildId: gc.guildId,
             guildName: gc.guildName,
             guildColor: gc.guildColor,
             guildIcon: gc.guildIcon,
-          }))
+          })) as UpcomingEvent[]
         })
       )
 
@@ -100,7 +100,7 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
       if (guild.resources.talkRoom) tokenToGuildId[guild.resources.talkRoom] = guild.id
     }
     fetch("/api/talk/rooms")
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
       .then((rooms: TalkRoom[]) => {
         const unread: Record<string, number> = {}
         for (const room of rooms) {
@@ -121,7 +121,7 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
 
     setChatLoading(selectedChatId)
     fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=3`)
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
       .then((msgs: TalkMessage[]) => {
         setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-3) : [] }))
       })
@@ -137,36 +137,44 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
   const firstName = user.name?.split(" ")[0] || user.username
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Welcome */}
-      <div className="shrink-0 px-8 pt-7 pb-5">
-        <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.24em] text-gold/50">
-          Per aspera ad astra
-        </p>
-        <h1 className="mb-1 font-display text-[26px] font-normal tracking-[0.05em] text-gold/85">
-          The Hearth
-        </h1>
-        <p className="text-base font-light text-white/45">
-          {greeting}, {firstName}.
-        </p>
-      </div>
+    <div className="flex h-full gap-3">
+      {/* Main glass panel */}
+      <div
+        className="glass flex flex-1 flex-col overflow-hidden"
+        style={{ borderRadius: 'var(--panel-radius)' }}
+      >
+        <div className="scrollbar-none flex-1 overflow-y-auto px-8 pb-8 pt-7">
+          {/* Welcome */}
+          <div className="mb-7">
+            <p
+              className="mb-1 font-display text-[9px] font-semibold uppercase tracking-[0.24em]"
+              style={{ color: 'rgba(201,162,39,0.5)' }}
+            >
+              Per aspera ad astra
+            </p>
+            <h1
+              className="mb-1 font-display text-[26px] font-normal tracking-[0.05em]"
+              style={{ color: 'rgba(201,162,39,0.85)' }}
+            >
+              The Hearth
+            </h1>
+            <p className="text-base font-light" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              {greeting}, {firstName}.
+            </p>
+          </div>
 
-      <div className="mx-8 mb-5 h-px shrink-0 bg-white/07" />
-
-      {/* Body */}
-      <div className="flex flex-1 gap-0 overflow-hidden">
-
-        {/* Main column */}
-        <div className="custom-scrollbar flex-1 overflow-y-auto px-8 pb-8">
+          {/* Hairline */}
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
           {/* The Chat */}
           {chatGuilds.length > 0 && (
             <section className="mb-5">
-              <div className="mb-2.5 flex items-center gap-1.5">
-                <MessageSquare className="h-3 w-3 text-white/30" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
-                  The Chat
-                </span>
+              <div
+                className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                <MessageSquare className="h-3 w-3" />
+                The Chat
               </div>
 
               {/* Guild tabs */}
@@ -178,15 +186,32 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
                     <button
                       key={guild.id}
                       onClick={() => setSelectedChatId(guild.id)}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-all ${
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-all"
+                      style={
                         isActive
-                          ? "border border-white/10 bg-white/08 text-white/90"
-                          : "border border-transparent text-white/35 hover:bg-white/05 hover:text-white/65"
-                      }`}
+                          ? {
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'rgba(255,255,255,0.9)',
+                            }
+                          : {
+                              color: 'rgba(255,255,255,0.35)',
+                              border: '1px solid transparent',
+                            }
+                      }
                     >
                       {guild.name}
                       {unread > 0 && (
-                        <span className="rounded-[10px] bg-gold/85 px-1.5 py-px text-[10px] font-bold text-black/90">
+                        <span
+                          style={{
+                            background: 'rgba(201,162,39,0.85)',
+                            color: '#0d0a04',
+                            borderRadius: '10px',
+                            padding: '1px 5px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                          }}
+                        >
                           {unread > 99 ? "99+" : unread}
                         </span>
                       )}
@@ -197,13 +222,22 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
 
               {/* Message preview panel */}
               {selectedGuild && (
-                <div className="overflow-hidden rounded-[14px] border border-white/06 bg-white/03">
+                <div
+                  className="overflow-hidden"
+                  style={{
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.03)',
+                  }}
+                >
                   {chatLoading === selectedChatId ? (
-                    <div className="flex items-center gap-2 px-4 py-5 text-xs text-white/25">
+                    <div className="flex items-center gap-2 px-4 py-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                       <Loader2 className="h-3 w-3 animate-spin" /> Loading…
                     </div>
                   ) : selectedMessages.length === 0 ? (
-                    <div className="px-4 py-5 text-[13px] italic text-white/25">No messages yet</div>
+                    <div className="px-4 py-5 text-[13px] italic" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      No messages yet
+                    </div>
                   ) : (
                     selectedMessages.map((msg, i) => (
                       <MessageRow
@@ -216,7 +250,11 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
                   )}
                   <Link
                     href={`/guild/${selectedChatId}/pulse`}
-                    className="flex items-center justify-center gap-1.5 border-t border-white/05 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-gold/60 transition-colors hover:bg-white/03 hover:text-gold/90"
+                    className="flex w-full items-center justify-center border-t py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-white/03"
+                    style={{
+                      borderColor: 'rgba(255,255,255,0.05)',
+                      color: 'rgba(201,162,39,0.6)',
+                    }}
                   >
                     Open full chat →
                   </Link>
@@ -225,44 +263,68 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
             </section>
           )}
 
-          <div className="mb-5 h-px bg-white/07" />
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
           {/* My Guilds */}
           <section>
             <div className="mb-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Users className="h-3 w-3 text-white/30" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
-                  My Guilds
-                </span>
+              <div
+                className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                <Users className="h-3 w-3" />
+                My Guilds
               </div>
               <button
                 onClick={() => setShowCreateGuild(true)}
-                className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/25 transition-colors hover:text-white/60"
+                className="text-[11px] font-medium uppercase tracking-[0.08em] transition-colors hover:text-white/60"
+                style={{ color: 'rgba(255,255,255,0.25)' }}
               >
                 + Seed
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-[10px]">
               {userGuilds.map((guild) => (
                 <Link
                   key={guild.id}
                   href={`/guild/${guild.id}`}
-                  className="block rounded-[14px] border border-white/07 bg-white/04 p-4 transition-all hover:border-white/12 hover:bg-white/07"
+                  className="group block transition-all"
+                  style={{
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    background: 'rgba(255,255,255,0.04)',
+                    padding: '18px 16px',
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLAnchorElement
+                    el.style.background = 'rgba(255,255,255,0.07)'
+                    el.style.borderColor = 'rgba(255,255,255,0.12)'
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLAnchorElement
+                    el.style.background = 'rgba(255,255,255,0.04)'
+                    el.style.borderColor = 'rgba(255,255,255,0.07)'
+                  }}
                 >
                   <div
-                    className="mb-2.5 flex h-[38px] w-[38px] items-center justify-center rounded-[10px] text-base leading-none"
-                    style={{ backgroundColor: `${guild.color}1e` }}
+                    className="mb-2.5 flex h-[38px] w-[38px] items-center justify-center text-base leading-none"
+                    style={{
+                      borderRadius: '10px',
+                      backgroundColor: `${guild.color}1e`,
+                    }}
                   >
                     {guild.icon?.startsWith("data:") ? (
                       <img src={guild.icon} alt="" className="h-5 w-5 object-contain" />
                     ) : (guild.icon || "⬡")}
                   </div>
-                  <p className="mb-0.5 font-display text-[13px] font-normal tracking-[0.02em] text-white/85">
+                  <p
+                    className="mb-0.5 font-display text-[13px] font-normal tracking-[0.02em]"
+                    style={{ color: 'rgba(255,255,255,0.85)' }}
+                  >
                     {guild.name}
                   </p>
-                  <p className="text-[12px] text-white/30">
+                  <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
                     {guild.memberCount} {guild.memberCount === 1 ? "member" : "members"}
                   </p>
                 </Link>
@@ -270,25 +332,32 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
             </div>
           </section>
         </div>
+      </div>
 
-        {/* Right sidebar */}
-        <div className="custom-scrollbar w-[280px] shrink-0 overflow-y-auto border-l border-white/05 px-5 py-5">
-
-          {/* Upcoming */}
+      {/* Right sidebar glass panel */}
+      <div
+        className="glass flex w-[280px] shrink-0 flex-col overflow-hidden"
+        style={{ borderRadius: 'var(--panel-radius)' }}
+      >
+        <div className="scrollbar-none flex-1 overflow-y-auto px-5 py-[22px]">
+          {/* Upcoming events accordion */}
           <div className="mb-6">
-            <div className="mb-2.5 flex items-center gap-1.5">
-              <Calendar className="h-3 w-3 text-white/30" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
-                Upcoming
-              </span>
+            <div
+              className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+            >
+              <Calendar className="h-3 w-3" />
+              Upcoming
             </div>
 
             {loadingEvents ? (
-              <div className="flex items-center gap-2 py-4 text-[13px] text-white/25">
+              <div className="flex items-center gap-2 py-4 text-[13px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
                 <Loader2 className="h-3 w-3 animate-spin" /> Loading…
               </div>
             ) : events.length === 0 ? (
-              <p className="py-3 text-[13px] italic text-white/25">No rites foretold</p>
+              <p className="py-3 text-[13px] italic" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                No rites foretold
+              </p>
             ) : (
               <div>
                 {events.slice(0, 8).map((event) => {
@@ -306,15 +375,17 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
             )}
           </div>
 
-          <div className="mb-5 h-px bg-white/07" />
+          {/* Hairline */}
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
           {/* Live Chambers */}
           <div>
-            <div className="mb-2.5 flex items-center gap-1.5">
-              <Video className="h-3 w-3 text-white/30" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
-                Live Chambers
-              </span>
+            <div
+              className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+            >
+              <Video className="h-3 w-3" />
+              Live Chambers
             </div>
             {userGuilds.map((guild) => (
               <a
@@ -322,18 +393,27 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
                 href={CHAMBER_HREF(guild.id)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 border-b border-white/05 py-2.5 last:border-0 transition-opacity hover:opacity-70"
+                className="flex items-center gap-2.5 py-2.5 last:border-0 transition-opacity hover:opacity-70"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
               >
                 <div
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-sm leading-none"
-                  style={{ backgroundColor: `${guild.color}1a` }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center text-sm leading-none"
+                  style={{
+                    borderRadius: '7px',
+                    backgroundColor: `${guild.color}1a`,
+                  }}
                 >
                   {guild.icon?.startsWith("data:") ? (
                     <img src={guild.icon} alt="" className="h-4 w-4 object-contain" />
                   ) : (guild.icon || "⬡")}
                 </div>
-                <span className="flex-1 text-[14px] text-white/60">{guild.name}</span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/20">
+                <span className="flex-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {guild.name}
+                </span>
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: 'rgba(255,255,255,0.2)' }}
+                >
                   Join
                 </span>
               </a>
@@ -374,24 +454,33 @@ function initials(name: string): string {
 function MessageRow({ msg, color, isLast }: { msg: TalkMessage; color: string; isLast: boolean }) {
   return (
     <div
-      className={`flex gap-2.5 px-4 py-3 transition-colors hover:bg-white/03 ${
-        !isLast ? "border-b border-white/05" : ""
-      }`}
+      className="flex gap-2.5 transition-colors hover:bg-white/03"
+      style={{
+        padding: '13px 16px',
+        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+      }}
     >
       <div
-        className="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white/80"
-        style={{ backgroundColor: `${color}73` }}
+        className="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+        style={{ backgroundColor: `${color}73`, color: 'rgba(255,255,255,0.8)' }}
       >
         {initials(msg.actorDisplayName || msg.actorId)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-0.5 flex items-baseline gap-2">
-          <span className="text-[13px] font-medium text-white/85">
+          <span className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>
             {msg.actorDisplayName || msg.actorId}
           </span>
-          <span className="text-[11px] text-white/25">{formatAgo(msg.timestamp)}</span>
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            {formatAgo(msg.timestamp)}
+          </span>
         </div>
-        <p className="text-[14px] leading-snug text-white/50 truncate">{msg.message}</p>
+        <p
+          className="truncate text-[14px]"
+          style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}
+        >
+          {msg.message}
+        </p>
       </div>
     </div>
   )
@@ -423,17 +512,24 @@ function EventAccordionRow({
   const guildColor = event.guildColor || "#c9a227"
 
   return (
-    <div className="border-b border-white/05 last:border-0">
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }} className="last:border-0">
       <button
         onClick={onToggle}
         className="flex w-full items-center gap-2.5 py-2.5 text-left transition-opacity hover:opacity-80"
       >
         <ChevronRight
-          className={`h-3 w-3 shrink-0 text-white/20 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          className="h-3 w-3 shrink-0 transition-transform"
+          style={{
+            color: 'rgba(255,255,255,0.2)',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            transitionDuration: '0.18s',
+          }}
         />
-        <span className="flex-1 text-[14px] text-white/80">{event.title}</span>
+        <span className="flex-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+          {event.title}
+        </span>
         <span
-          className="shrink-0 text-[11px] font-medium whitespace-nowrap"
+          className="shrink-0 whitespace-nowrap text-[11px] font-medium"
           style={{ color: isToday ? "#c9a227b3" : `${guildColor}b3` }}
         >
           {dayLabel}
@@ -441,8 +537,10 @@ function EventAccordionRow({
       </button>
       {isOpen && (
         <div className="pb-3 pl-[22px]">
-          <p className="mb-1.5 text-[13px] leading-relaxed text-white/40">{event.guildName}</p>
-          <div className="mb-2 flex gap-3 text-[12px] text-white/25">
+          <p className="mb-1.5 text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            {event.guildName}
+          </p>
+          <div className="mb-2 flex gap-3 text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
             <span>{timeLabel}</span>
           </div>
           <Link
