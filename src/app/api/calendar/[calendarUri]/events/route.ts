@@ -14,20 +14,29 @@ function authentikHeaders(headersList: Headers): Record<string, string> {
   }
 }
 
-// Write operations proxy as admin — guild calendars are owned by admin and
-// Authentik-only users have no Nextcloud principal. We send admin as the
-// Authentik username so the PHP CalDAV lookup succeeds, and carry the real
-// user in X-Real-Username for attribution if the PHP wants it.
-function adminAuthHeaders(headersList: Headers): Record<string, string> {
+// Read: just spoof admin as the Authentik username — Nextcloud allows
+// reads from the internal Docker network without session auth, and the
+// PHP resolves the calendar owner from the header.
+function adminReadHeaders(headersList: Headers): Record<string, string> {
+  return {
+    "X-Authentik-Username": "admin",
+    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
+    "X-Authentik-Name": "Administrator",
+    "X-Real-Username": headersList.get("x-authentik-username") || "",
+  }
+}
+
+// Write: Basic Auth needed so Nextcloud validates the session before
+// the PHP CalDAV write can proceed.
+function adminWriteHeaders(headersList: Headers): Record<string, string> {
   const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
   const token = Buffer.from(`admin:${password}`).toString("base64")
-  const realUser = headersList.get("x-authentik-username") || ""
   return {
     Authorization: `Basic ${token}`,
     "X-Authentik-Username": "admin",
     "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
     "X-Authentik-Name": "Administrator",
-    "X-Real-Username": realUser,
+    "X-Real-Username": headersList.get("x-authentik-username") || "",
   }
 }
 
@@ -82,7 +91,7 @@ export async function GET(
     const { status, data } = await nextcloudRequest(
       "GET",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events${qs ? `?${qs}` : ""}`,
-      adminAuthHeaders(headersList)
+      adminReadHeaders(headersList)
     )
     return NextResponse.json(data, { status })
   } catch (error) {
@@ -105,7 +114,7 @@ export async function POST(
     const { status, data } = await nextcloudRequest(
       "POST",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events`,
-      adminAuthHeaders(headersList),
+      adminWriteHeaders(headersList),
       JSON.stringify(body)
     )
     return NextResponse.json(data, { status })
