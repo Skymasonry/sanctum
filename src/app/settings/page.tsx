@@ -73,7 +73,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="glass flex h-full flex-col overflow-hidden" style={{ borderRadius: 'var(--panel-radius)' }}>
+    <div className="flex h-full flex-col overflow-y-auto scrollbar-none p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8">
         <Link
@@ -293,6 +294,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }
