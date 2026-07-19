@@ -222,14 +222,7 @@ export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalenda
 
               {/* Message preview panel */}
               {selectedGuild && (
-                <div
-                  className="overflow-hidden"
-                  style={{
-                    borderRadius: '14px',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    background: 'rgba(255,255,255,0.03)',
-                  }}
-                >
+                <div className="glass-light overflow-hidden rounded-[14px]">
                   {chatLoading === selectedChatId ? (
                     <div className="flex items-center gap-2 px-4 py-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                       <Loader2 className="h-3 w-3 animate-spin" /> Loading…
@@ -289,23 +282,7 @@ export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalenda
                 <Link
                   key={guild.id}
                   href={`/guild/${guild.id}`}
-                  className="group block transition-all"
-                  style={{
-                    borderRadius: '14px',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    background: 'rgba(255,255,255,0.04)',
-                    padding: '18px 16px',
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLAnchorElement
-                    el.style.background = 'rgba(255,255,255,0.07)'
-                    el.style.borderColor = 'rgba(255,255,255,0.12)'
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLAnchorElement
-                    el.style.background = 'rgba(255,255,255,0.04)'
-                    el.style.borderColor = 'rgba(255,255,255,0.07)'
-                  }}
+                  className="group glass-light block rounded-[14px] p-[18px_16px] transition-all hover:bg-white/07 hover:border-white/12"
                 >
                   <div
                     className="mb-2.5 flex h-[38px] w-[38px] items-center justify-center text-base leading-none"

@@ -53,7 +53,8 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
 
   return (
     <GuildThresholdClient guild={guild} isSeeder={isSeeder}>
-      <div className="relative flex h-full flex-col p-6 lg:p-8">
+      <div className="relative flex h-full flex-col overflow-hidden">
+      <div className="scrollbar-none flex-1 overflow-y-auto p-6 lg:p-8">
         {isSeeder && (
           <Link
             href={`/guild/${guildId}/settings`}
@@ -98,6 +99,7 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
           <EntryGrid guildId={guildId} guild={guild} notifications={notifications} />
 
         </div>
+      </div>
       </div>
     </GuildThresholdClient>
   )

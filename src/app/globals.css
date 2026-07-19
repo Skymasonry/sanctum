@@ -139,6 +139,13 @@
     border: 1px solid rgba(201, 162, 39, 0.10);
   }
 
+  .glass-light {
+    background: rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
   .glass-subtle {
     background: rgba(255, 255, 255, 0.02);
     -webkit-backdrop-filter: blur(12px);
@@ -157,7 +164,8 @@
 @layer base {
   body {
     @apply text-white antialiased;
-    font-family: var(--font-body-face), Georgia, serif;
+    font-family: var(--font-body-face), system-ui, sans-serif;
+    font-size: 15px;
     background-color: #0c0904;
     background-image:
       radial-gradient(ellipse 70% 60% at 15% 25%, rgba(110,62,8,0.75) 0%, transparent 60%),

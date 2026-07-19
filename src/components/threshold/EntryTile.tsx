@@ -21,9 +21,9 @@ export function EntryTile({ href, icon: Icon, title, description, badge, externa
     <Wrapper
       {...linkProps}
       className={cn(
-        "group relative flex flex-col items-center justify-center rounded-xl bg-black-light",
+        "group relative flex flex-col items-center justify-center rounded-xl glass-light",
         "px-4 py-6 text-center transition-all duration-200",
-        "border border-gray-dark hover:-translate-y-0.5 hover:border-guild/60 hover:bg-guild/5",
+        "hover:-translate-y-0.5 hover:border-guild/60 hover:bg-guild/5",
       )}
     >
       {badge !== undefined && badge > 0 && (
@@ -46,7 +46,7 @@ export function EntryTile({ href, icon: Icon, title, description, badge, externa
         />
       </div>
 
-      <span className="font-display text-base font-medium tracking-wide text-white transition-colors group-hover:text-guild">
+      <span className="text-base font-medium tracking-wide text-white transition-colors group-hover:text-guild">
         {title}
       </span>
       <p className="mt-1 text-xs text-gray">{description}</p>

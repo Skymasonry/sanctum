@@ -103,10 +103,15 @@ export function Sidebar({ guilds }: SidebarProps) {
             />
           ))}
         </LayoutGroup>
+      </nav>
+
+      {/* Bottom actions */}
+      <div className="mt-4 flex flex-col items-center gap-2">
+        <div className="mb-1 h-px w-8 bg-white/10" />
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-9 w-9 items-center justify-center rounded-[10px] text-ember/70 transition-all duration-150",
+            "flex h-9 w-9 items-center justify-center rounded-[10px] text-ember/70 transition-all duration-150",
             "hover:bg-white/08 hover:text-ember",
             pathname === "/create-guild" && "bg-white/08 text-ember",
           )}
@@ -127,11 +132,7 @@ export function Sidebar({ guilds }: SidebarProps) {
         >
           <Compass className="h-[14px] w-[14px]" strokeWidth={2.5} />
         </Link>
-      </nav>
-
-      {/* Bottom actions */}
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <div className="mb-2 h-px w-8 bg-white/10" />
+        <div className="mt-1 mb-1 h-px w-8 bg-white/10" />
         <InviteButton />
       </div>
     </aside>
