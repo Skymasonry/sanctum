@@ -552,7 +552,7 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
   const selectClass = "w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2 text-sm text-white focus:border-guild focus:outline-none"
 
   return (
-    <div className="flex-1">
+    <div className="scrollbar-none flex-1 overflow-y-auto">
       {/* Action buttons */}
       <div className="mb-6 flex flex-wrap gap-3">
         <button

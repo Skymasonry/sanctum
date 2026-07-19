@@ -55,7 +55,7 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
   })
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<Users className="h-10 w-10 text-guild" />}
@@ -73,7 +73,7 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
         </Link>
       </div>
 
-      <div className="flex-1">
+      <div className="scrollbar-none flex-1 overflow-y-auto">
         {isSeeder && applications.length > 0 && (
           <ApplicationsPanel guildId={guildId} applications={applications} />
         )}
