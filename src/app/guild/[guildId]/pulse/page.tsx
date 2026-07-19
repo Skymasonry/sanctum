@@ -22,7 +22,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
 
   if (!guild.resources.talkRoom) {
     return (
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
         <ChamberHeader
           backHref={`/guild/${guildId}`}
           icon={<MessageCircle className="h-10 w-10 text-guild" />}
@@ -44,7 +44,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
   const messages = await getMessages(token, 50)
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<MessageCircle className="h-10 w-10 text-guild" />}

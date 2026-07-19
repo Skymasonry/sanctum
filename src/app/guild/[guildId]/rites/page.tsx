@@ -23,7 +23,7 @@ export default async function RitesPage({ params }: RitesPageProps) {
 
   if (!calendarUri) {
     return (
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
         <ChamberHeader
           backHref={`/guild/${guildId}`}
           icon={<Calendar className="h-10 w-10 text-guild" />}
@@ -44,7 +44,7 @@ export default async function RitesPage({ params }: RitesPageProps) {
   const events = await getEvents(calendarUri)
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<Calendar className="h-10 w-10 text-guild" />}

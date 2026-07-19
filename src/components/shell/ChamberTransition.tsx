@@ -31,7 +31,7 @@ export function ChamberTransition({ children }: ChamberTransitionProps) {
         animate="animate"
         exit="exit"
         transition={chamberTransition}
-        className="flex-1"
+        className="flex-1 min-h-0 overflow-hidden"
       >
         {children}
       </motion.div>
