@@ -10,14 +10,16 @@ export default async function CreateGuildPage() {
   if (!user) redirect("/")
 
   return (
-    <div className="mx-auto flex h-full max-w-3xl flex-col p-6 lg:p-8">
-      <ChamberHeader
-        backHref="/"
-        icon={<Hammer className="h-10 w-10 text-guild" />}
-        title="Seed a Guild"
-        subtitle="Bring a new chamber into the sanctum"
-      />
-      <GuildBuilder />
+    <div className="glass flex h-full flex-col overflow-hidden" style={{ borderRadius: 'var(--panel-radius)' }}>
+      <div className="mx-auto flex h-full w-full max-w-3xl flex-col p-6 lg:p-8">
+        <ChamberHeader
+          backHref="/"
+          icon={<Hammer className="h-10 w-10 text-guild" />}
+          title="Seed a Guild"
+          subtitle="Bring a new chamber into the sanctum"
+        />
+        <GuildBuilder />
+      </div>
     </div>
   )
 }

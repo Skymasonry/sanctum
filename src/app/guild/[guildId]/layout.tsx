@@ -16,8 +16,8 @@ export default async function GuildLayout({ children, params }: GuildLayoutProps
 
   return (
     <div
-      className="flex h-full flex-col"
-      style={{ "--guild-color": hexToRgb(color) } as React.CSSProperties}
+      className="glass flex h-full flex-col overflow-hidden"
+      style={{ borderRadius: 'var(--panel-radius)', "--guild-color": hexToRgb(color) } as React.CSSProperties}
     >
       <ChamberTransition>{children}</ChamberTransition>
     </div>
