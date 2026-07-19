@@ -15,26 +15,25 @@ export interface CalendarEvent {
   links?: Array<{ type: string; label: string; url: string }>
 }
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
+async function getAdminAuthHeaders(): Promise<Record<string, string>> {
   const headersList = await headers()
   const username = headersList.get("x-authentik-username")
-  const groups = headersList.get("x-authentik-groups")
-  const name = headersList.get("x-authentik-name")
+  if (!username) throw new Error("Unauthorized")
 
-  if (!username) {
-    throw new Error("Unauthorized")
-  }
-
+  const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
+  const token = Buffer.from(`admin:${password}`).toString("base64")
   return {
-    "X-Authentik-Username": username,
-    "X-Authentik-Groups": groups || "",
-    "X-Authentik-Name": name || "",
+    Authorization: `Basic ${token}`,
+    "X-Authentik-Username": "admin",
+    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
+    "X-Authentik-Name": "Administrator",
+    "X-Real-Username": username,
   }
 }
 
 export async function getEvents(calendarUri: string): Promise<CalendarEvent[]> {
   try {
-    const authHeaders = await getAuthHeaders()
+    const authHeaders = await getAdminAuthHeaders()
     return await fetchFromNextcloud(
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events`,
       { headers: authHeaders }
