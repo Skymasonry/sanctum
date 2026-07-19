@@ -20,25 +20,22 @@ export function Header({ user }: HeaderProps) {
   if (!user) return null
 
   return (
-    <header className="glass rounded-2xl flex h-12 shrink-0 items-center justify-end gap-4 px-5">
-      <span className="rounded border border-gold/30 px-1.5 py-0.5 text-[10px] tracking-wider text-gold/60">neo</span>
-      <Link
-        href="/settings"
-        className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
-      >
-        <span className="text-sm text-gray-light">{user.name}</span>
+    <header className="flex h-12 shrink-0 items-center justify-end gap-3.5 px-5">
+      <span className="text-[13px] font-light text-white/45">{user.name}</span>
+      <Link href="/settings" className="transition-opacity hover:opacity-80">
         <img
           src={`/api/avatar/${user.username}/32`}
           alt={user.name}
-          className="h-8 w-8 rounded-full border border-white/10"
+          className="h-8 w-8 rounded-full border"
+          style={{ borderColor: 'rgba(201,162,39,0.3)' }}
         />
       </Link>
       <a
         href={LOGOUT_URL}
-        className="flex items-center gap-1.5 text-sm text-gray transition-colors hover:text-gold"
+        className="flex items-center gap-1 text-[12px] font-medium text-white/30 transition-colors hover:text-white/60"
       >
-        <LogOut className="h-4 w-4" />
-        <span>Depart</span>
+        <LogOut className="h-3 w-3" />
+        Depart
       </a>
     </header>
   )

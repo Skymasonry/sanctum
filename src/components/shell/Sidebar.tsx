@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
 import { Compass, Plus, ExternalLink, MessageSquare, Scroll } from "lucide-react"
@@ -67,26 +66,33 @@ export function Sidebar({ guilds }: SidebarProps) {
   })
 
   return (
-    <aside className="glass rounded-2xl flex h-full w-[68px] shrink-0 flex-col items-center py-4">
-      {/* Logo */}
+    <aside className="glass rounded-[20px] flex h-full w-[68px] shrink-0 flex-col items-center py-4">
+      {/* Logo — Cinzel "S" monogram */}
       <Link
         href="/"
         className="mb-5 flex h-10 w-10 items-center justify-center transition-opacity hover:opacity-80"
       >
-        <Image
-          src="/logo.jpg"
-          alt="Skymasons"
-          width={36}
-          height={36}
-          className="rounded-full"
-        />
+        <div
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-full"
+          style={{
+            background: 'rgba(201,162,39,0.12)',
+            border: '1px solid rgba(201,162,39,0.2)',
+          }}
+        >
+          <span
+            className="font-display text-[15px] font-normal leading-none"
+            style={{ color: 'rgba(201,162,39,0.8)' }}
+          >
+            S
+          </span>
+        </div>
       </Link>
 
       {/* Divider */}
       <div className="mb-4 h-px w-8 bg-white/10" />
 
       {/* Guild Icons */}
-      <nav className="flex flex-1 flex-col items-center gap-1.5 overflow-y-auto custom-scrollbar">
+      <nav className="scrollbar-none flex flex-1 flex-col items-center gap-1.5 overflow-y-auto">
         <LayoutGroup>
           {sortedGuilds.map((guild) => (
             <SidebarItem
@@ -100,26 +106,26 @@ export function Sidebar({ guilds }: SidebarProps) {
         <Link
           href="/create-guild"
           className={cn(
-            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl text-ember/70 transition-all duration-150",
-            "hover:scale-110 hover:bg-white/08 hover:text-ember",
+            "mt-1 flex h-9 w-9 items-center justify-center rounded-[10px] text-ember/70 transition-all duration-150",
+            "hover:bg-white/08 hover:text-ember",
             pathname === "/create-guild" && "bg-white/08 text-ember",
           )}
           title="Seed a new guild"
           aria-label="Seed a new guild"
         >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
+          <Plus className="h-[14px] w-[14px]" strokeWidth={2.5} />
         </Link>
         <Link
           href="/discover"
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl text-gold/60 transition-all duration-150",
-            "hover:scale-110 hover:bg-white/08 hover:text-gold",
+            "flex h-9 w-9 items-center justify-center rounded-[10px] text-gold/60 transition-all duration-150",
+            "hover:bg-white/08 hover:text-gold",
             pathname === "/discover" && "bg-white/08 text-gold",
           )}
           title="Discover guilds"
           aria-label="Discover guilds"
         >
-          <Compass className="h-5 w-5" strokeWidth={2.5} />
+          <Compass className="h-[14px] w-[14px]" strokeWidth={2.5} />
         </Link>
       </nav>
 
@@ -166,19 +172,23 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
         href={`/guild/${guild.id}`}
         className={cn(
           "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
-          "hover:scale-110 hover:bg-white/08",
-          isActive && "bg-white/08"
+          "hover:bg-white/08",
+          isActive && "hover:bg-transparent"
         )}
         style={{
-          boxShadow: isActive ? `inset 0 0 0 1.5px ${guild.color}40` : "none",
+          background: isActive ? 'rgba(201,162,39,0.12)' : undefined,
         }}
         title={guild.name}
       >
         {isActive && (
           <motion.div
             layoutId="active-pip"
-            className="absolute -left-[5px] top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
-            style={{ backgroundColor: guild.color }}
+            className="absolute -left-[5px] top-1/2 -translate-y-1/2 rounded-[2px]"
+            style={{
+              backgroundColor: guild.color,
+              height: '18px',
+              width: '3px',
+            }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           />
         )}
