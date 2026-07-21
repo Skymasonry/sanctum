@@ -1,4 +1,5 @@
 import { ChamberTransition } from "@/components/shell"
+import { GuildAtmosphere } from "@/components/shell/GuildAtmosphere"
 import { getGuild } from "@/lib/guilds"
 import type { ReactNode } from "react"
 
@@ -28,15 +29,17 @@ export default async function GuildLayout({ children, params }: GuildLayoutProps
         border: `1px solid rgb(${rgb} / 0.15)`,
       } as React.CSSProperties}
     >
-      {/* Guild-colour atmospheric tint */}
+      {/* Guild-colour atmospheric tint inside panel */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(ellipse 110% 50% at 50% -10%, rgb(${rgb} / 0.12) 0%, transparent 65%)`,
+          background: `radial-gradient(ellipse 110% 55% at 50% -10%, rgb(${rgb} / 0.18) 0%, transparent 65%)`,
           borderRadius: 'inherit',
         }}
       />
+      {/* Body background tint — runs client-side */}
+      <GuildAtmosphere rgb={rgb} />
       <ChamberTransition>{children}</ChamberTransition>
     </div>
   )

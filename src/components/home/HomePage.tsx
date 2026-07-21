@@ -25,6 +25,7 @@ interface UpcomingEvent {
   guildName: string
   guildColor: string
   guildIcon: string
+  links?: Array<{ type: string; label: string; url: string }>
 }
 
 interface HomePageProps {
@@ -120,10 +121,10 @@ export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalenda
     if (!guild?.resources.talkRoom) return
 
     setChatLoading(selectedChatId)
-    fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=10`)
+    fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=4`)
       .then((r) => (r.ok ? r.json() : []))
       .then((msgs: TalkMessage[]) => {
-        setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-10) : [] }))
+        setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-4) : [] }))
       })
       .catch(() => {
         setChatMessages((prev) => ({ ...prev, [selectedChatId]: [] }))
@@ -520,12 +521,25 @@ function EventAccordionRow({
           <div className="mb-2 flex gap-3 text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
             <span>{timeLabel}</span>
           </div>
-          <Link
-            href={`/guild/${event.guildId}/rites`}
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gold/60 hover:text-gold/90"
-          >
-            View in Rites →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/guild/${event.guildId}/rites`}
+              className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gold/60 hover:text-gold/90"
+            >
+              View in Rites →
+            </Link>
+            {event.links?.find(l => l.type === "meeting") && (
+              <a
+                href={event.links.find(l => l.type === "meeting")!.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-80"
+                style={{ color: `${guildColor}cc` }}
+              >
+                Join Chamber ↗
+              </a>
+            )}
+          </div>
         </div>
       )}
     </div>
