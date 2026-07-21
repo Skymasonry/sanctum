@@ -26,7 +26,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(imageBuffer), {
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+        "Cache-Control": "no-cache",
       },
     })
   } catch {
