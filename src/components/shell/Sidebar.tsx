@@ -178,7 +178,7 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
       onMouseLeave={handleMouseLeave}
     >
       <div className="glass w-44 overflow-hidden rounded-xl shadow-2xl">
-        <div className="border-b border-white/06 px-3 py-2.5">
+        <div className="px-3 pb-1 pt-2.5">
           <p className="font-display text-xs font-semibold tracking-wider" style={{ color: guild.color }}>
             {guild.name}
           </p>
