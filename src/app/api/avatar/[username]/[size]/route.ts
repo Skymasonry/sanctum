@@ -17,13 +17,9 @@ export async function GET(
   const authUsername = headersList.get("x-authentik-username")
   if (!authUsername) return new NextResponse("Unauthorized", { status: 401 })
 
-  const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
-  const basicAuth = Buffer.from(`admin:${password}`).toString("base64")
-
   try {
     const { data, contentType } = await fetchFollowingRedirects(
       `/index.php/avatar/${encodeURIComponent(username)}/${sizeNum}`,
-      basicAuth,
       3
     )
     console.log(`[avatar] ${username}/${sizeNum} → ${contentType} (${data.length} bytes)`)
@@ -40,7 +36,6 @@ export async function GET(
 
 function fetchFollowingRedirects(
   path: string,
-  basicAuth: string,
   maxRedirects: number
 ): Promise<{ data: Buffer; contentType: string }> {
   return new Promise((resolve, reject) => {
@@ -53,7 +48,6 @@ function fetchFollowingRedirects(
           method: "GET",
           headers: {
             Host: "brothers.skymasons.xyz",
-            Authorization: `Basic ${basicAuth}`,
           },
         },
         (res) => {
