@@ -177,15 +177,7 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
       onMouseEnter={() => { if (closeTimer.current) clearTimeout(closeTimer.current) }}
       onMouseLeave={handleMouseLeave}
     >
-      <div
-        className="w-44 overflow-hidden rounded-xl shadow-2xl"
-        style={{
-          background: "rgba(12, 8, 4, 0.90)",
-          backdropFilter: "blur(24px) saturate(160%)",
-          WebkitBackdropFilter: "blur(24px) saturate(160%)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
+      <div className="glass w-44 overflow-hidden rounded-xl shadow-2xl">
         <div className="border-b border-white/06 px-3 py-2.5">
           <p className="font-display text-xs font-semibold tracking-wider" style={{ color: guild.color }}>
             {guild.name}
