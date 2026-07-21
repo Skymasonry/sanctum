@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
@@ -147,11 +148,20 @@ interface SidebarItemProps {
 
 function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const [mounted, setMounted] = useState(false)
+  const itemRef = useRef<HTMLDivElement>(null)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => { setMounted(true) }, [])
+
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
+    if (itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect()
+      setMenuPos({ top: rect.top + rect.height / 2, left: rect.right + 8 })
+    }
     openTimer.current = setTimeout(() => setOpen(true), 350)
   }
 
@@ -160,109 +170,99 @@ function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
     closeTimer.current = setTimeout(() => setOpen(false), 150)
   }
 
-  return (
-    <motion.div
-      layout
-      layoutId={guild.id}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="relative"
-      onMouseEnter={handleMouseEnter}
+  const submenu = mounted && open && createPortal(
+    <div
+      className="fixed z-[9999]"
+      style={{ top: menuPos.top, left: menuPos.left, transform: 'translateY(-50%)' }}
+      onMouseEnter={() => { if (closeTimer.current) clearTimeout(closeTimer.current) }}
       onMouseLeave={handleMouseLeave}
     >
-      <Link
-        href={`/guild/${guild.id}`}
-        className={cn(
-          "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
-          "hover:bg-white/08",
-          isActive && "hover:bg-transparent"
-        )}
-        style={{
-          background: isActive ? 'rgba(201,162,39,0.12)' : undefined,
-        }}
-        title={guild.name}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="active-pip"
-            className="absolute -left-[5px] top-1/2 -translate-y-1/2 rounded-[2px]"
-            style={{
-              backgroundColor: guild.color,
-              height: '18px',
-              width: '3px',
-            }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          />
-        )}
-        <GuildIcon icon={guild.icon} color={guild.color} className="h-7 w-7 object-contain" />
-
-        {signal?.isLive ? (
-          <span
-            aria-label="Live now"
-            className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
-            style={{ boxShadow: "0 0 6px #d4623a" }}
-          />
-        ) : signal?.hasUnread ? (
-          <span
-            aria-label="Unread"
-            className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold"
-          />
-        ) : null}
-      </Link>
-
-      {/* Hover submenu */}
       <div
-        className={cn(
-          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-3 transition-all duration-200",
-          open ? "pointer-events-auto translate-x-0 opacity-100" : "-translate-x-2 opacity-0",
-        )}
+        className="w-44 overflow-hidden rounded-xl shadow-2xl"
+        style={{
+          background: "rgba(12, 8, 4, 0.90)",
+          backdropFilter: "blur(24px) saturate(160%)",
+          WebkitBackdropFilter: "blur(24px) saturate(160%)",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}
       >
-        <div
-          className="w-44 overflow-hidden rounded-xl shadow-2xl"
-          style={{
-            background: "rgba(12, 8, 4, 0.90)",
-            backdropFilter: "blur(24px) saturate(160%)",
-            WebkitBackdropFilter: "blur(24px) saturate(160%)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          {/* Guild name header */}
-          <div className="border-b border-white/06 px-3 py-2.5">
-            <p
-              className="font-display text-xs font-semibold tracking-wider"
-              style={{ color: guild.color }}
-            >
-              {guild.name}
-            </p>
-          </div>
-
-          {/* Links */}
-          <div className="p-1">
-            <a
-              href={CHAMBER_HREF(guild.id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
-            >
-              <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
-              The Chamber
-            </a>
-            <Link
-              href={`/guild/${guild.id}/pulse`}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
-            >
-              <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
-              The Chat
-            </Link>
-            <Link
-              href={`/guild/${guild.id}/rites`}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
-            >
-              <Scroll className="h-3 w-3 shrink-0 opacity-60" />
-              Rites
-            </Link>
-          </div>
+        <div className="border-b border-white/06 px-3 py-2.5">
+          <p className="font-display text-xs font-semibold tracking-wider" style={{ color: guild.color }}>
+            {guild.name}
+          </p>
+        </div>
+        <div className="p-1">
+          <a
+            href={CHAMBER_HREF(guild.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+            The Chamber
+          </a>
+          <Link
+            href={`/guild/${guild.id}/pulse`}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
+            The Chat
+          </Link>
+          <Link
+            href={`/guild/${guild.id}/rites`}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <Scroll className="h-3 w-3 shrink-0 opacity-60" />
+            Rites
+          </Link>
         </div>
       </div>
-    </motion.div>
+    </div>,
+    document.body
+  )
+
+  return (
+    <>
+      <motion.div
+        ref={itemRef}
+        layout
+        layoutId={guild.id}
+        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Link
+          href={`/guild/${guild.id}`}
+          className={cn(
+            "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
+            "hover:bg-white/08",
+            isActive && "hover:bg-transparent"
+          )}
+          style={{ background: isActive ? 'rgba(201,162,39,0.12)' : undefined }}
+          title={guild.name}
+        >
+          {isActive && (
+            <motion.div
+              layoutId="active-pip"
+              className="absolute -left-[5px] top-1/2 -translate-y-1/2 rounded-[2px]"
+              style={{ backgroundColor: guild.color, height: '18px', width: '3px' }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            />
+          )}
+          <GuildIcon icon={guild.icon} color={guild.color} className="h-7 w-7 object-contain" />
+          {signal?.isLive ? (
+            <span
+              aria-label="Live now"
+              className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
+              style={{ boxShadow: "0 0 6px #d4623a" }}
+            />
+          ) : signal?.hasUnread ? (
+            <span aria-label="Unread" className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold" />
+          ) : null}
+        </Link>
+      </motion.div>
+      {submenu}
+    </>
   )
 }
