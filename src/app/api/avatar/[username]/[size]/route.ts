@@ -50,11 +50,12 @@ function fetchAvatar(username: string, size: number, authUser: string): Promise<
       {
         hostname: "nextcloud",
         port: 80,
-        path: `/apps/skymasonsnav/api/avatar/${encodeURIComponent(username)}/${size}`,
+        path: `/index.php/avatar/${encodeURIComponent(username)}/${size}`,
         method: "GET",
         headers: {
           Host: "brothers.skymasons.xyz",
           "X-Authentik-Username": authUser,
+          Authorization: `Basic ${Buffer.from(`admin:${process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""}`).toString("base64")}`,
         },
       },
       (res) => {
