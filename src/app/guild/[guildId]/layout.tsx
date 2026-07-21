@@ -14,11 +14,29 @@ export default async function GuildLayout({ children, params }: GuildLayoutProps
   // Fallback color if guild not found
   const color = guild?.color || "#c9a227"
 
+  const rgb = hexToRgb(color)
+
   return (
     <div
-      className="glass flex h-full flex-col overflow-hidden"
-      style={{ borderRadius: 'var(--panel-radius)', "--guild-color": hexToRgb(color) } as React.CSSProperties}
+      className="relative flex h-full flex-col overflow-hidden"
+      style={{
+        borderRadius: 'var(--panel-radius)',
+        "--guild-color": rgb,
+        background: `rgba(16, 11, 6, 0.72)`,
+        backdropFilter: `blur(28px) saturate(160%)`,
+        WebkitBackdropFilter: `blur(28px) saturate(160%)`,
+        border: `1px solid rgb(${rgb} / 0.15)`,
+      } as React.CSSProperties}
     >
+      {/* Guild-colour atmospheric tint */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse 110% 50% at 50% -10%, rgb(${rgb} / 0.12) 0%, transparent 65%)`,
+          borderRadius: 'inherit',
+        }}
+      />
       <ChamberTransition>{children}</ChamberTransition>
     </div>
   )

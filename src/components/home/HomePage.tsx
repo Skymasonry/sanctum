@@ -120,10 +120,10 @@ export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalenda
     if (!guild?.resources.talkRoom) return
 
     setChatLoading(selectedChatId)
-    fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=3`)
+    fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=10`)
       .then((r) => (r.ok ? r.json() : []))
       .then((msgs: TalkMessage[]) => {
-        setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-3) : [] }))
+        setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-10) : [] }))
       })
       .catch(() => {
         setChatMessages((prev) => ({ ...prev, [selectedChatId]: [] }))

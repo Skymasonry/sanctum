@@ -31,7 +31,7 @@ export default async function GuildSettingsPage({ params }: GuildSettingsPagePro
         subtitle={guild.name}
       />
 
-      <section className="mt-2 rounded-xl border border-gray-dark bg-black-deep p-5">
+      <section className="mt-2 glass-light rounded-[var(--card-radius)] p-5">
         <h2 className="mb-1 font-display text-lg tracking-wide text-white">Guild info</h2>
         <p className="mb-4 text-sm text-gray">
           Name and purpose shown on the guild home and in Discover.
@@ -43,7 +43,7 @@ export default async function GuildSettingsPage({ params }: GuildSettingsPagePro
         />
       </section>
 
-      <section className="mt-5 rounded-xl border border-gray-dark bg-black-deep p-5">
+      <section className="mt-5 glass-light rounded-[var(--card-radius)] p-5">
         <h2 className="mb-1 font-display text-lg tracking-wide text-white">Chambers</h2>
         <p className="mb-4 text-sm text-gray">
           Toggle which chambers appear on this guild&apos;s home page.
