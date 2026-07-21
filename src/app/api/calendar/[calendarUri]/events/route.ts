@@ -6,33 +6,8 @@ function getUser(headersList: Headers): string | null {
   return headersList.get("x-authentik-username")
 }
 
-function authentikHeaders(headersList: Headers): Record<string, string> {
+function adminHeaders(headersList: Headers): Record<string, string> {
   return {
-    "X-Authentik-Username": headersList.get("x-authentik-username") || "",
-    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
-    "X-Authentik-Name": headersList.get("x-authentik-name") || "",
-  }
-}
-
-// Read: just spoof admin as the Authentik username — Nextcloud allows
-// reads from the internal Docker network without session auth, and the
-// PHP resolves the calendar owner from the header.
-function adminReadHeaders(headersList: Headers): Record<string, string> {
-  return {
-    "X-Authentik-Username": "admin",
-    "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
-    "X-Authentik-Name": "Administrator",
-    "X-Real-Username": headersList.get("x-authentik-username") || "",
-  }
-}
-
-// Write: Basic Auth needed so Nextcloud validates the session before
-// the PHP CalDAV write can proceed.
-function adminWriteHeaders(headersList: Headers): Record<string, string> {
-  const password = process.env.NEXTCLOUD_ADMIN_PASSWORD ?? ""
-  const token = Buffer.from(`admin:${password}`).toString("base64")
-  return {
-    Authorization: `Basic ${token}`,
     "X-Authentik-Username": "admin",
     "X-Authentik-Groups": headersList.get("x-authentik-groups") || "",
     "X-Authentik-Name": "Administrator",
@@ -91,7 +66,7 @@ export async function GET(
     const { status, data } = await nextcloudRequest(
       "GET",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events${qs ? `?${qs}` : ""}`,
-      adminReadHeaders(headersList)
+      adminHeaders(headersList)
     )
     return NextResponse.json(data, { status })
   } catch (error) {
@@ -114,7 +89,7 @@ export async function POST(
     const { status, data } = await nextcloudRequest(
       "POST",
       `/apps/skymasonsnav/api/calendar/${calendarUri}/events`,
-      adminWriteHeaders(headersList),
+      adminHeaders(headersList),
       JSON.stringify(body)
     )
     return NextResponse.json(data, { status })
