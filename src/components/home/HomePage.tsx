@@ -158,7 +158,7 @@ export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalenda
             >
               The Hearth
             </h1>
-            <p className="text-base font-light" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <p className="text-base font-light" style={{ color: 'rgba(255,255,255,0.45)' }} suppressHydrationWarning>
               {greeting}, {firstName}.
             </p>
           </div>
