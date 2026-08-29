@@ -39,7 +39,6 @@ export function GuildBuilder() {
   const [emblemMode, setEmblemMode] = useState<EmblemMode>("glyph")
   const [glyph, setGlyph] = useState<string>(DEFAULT_GLYPH)
 
-  const [ethosOpen, setEthosOpen] = useState(false)
   const [evolutionaryPurpose, setEvolutionaryPurpose] = useState("")
   const [patternIntegrity, setPatternIntegrity] = useState("")
 
@@ -154,47 +153,19 @@ export function GuildBuilder() {
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center gap-2">
           <label className="block text-xs uppercase tracking-widest text-faint">Guild ethos</label>
           <span className="text-[0.65rem] uppercase tracking-widest text-faint/70">Optional</span>
         </div>
-
-        {!ethosOpen ? (
-          <div className="rounded-lg border border-dashed border-gray-dark bg-black-deep/50 p-4">
-            <p className="mb-3 text-sm text-gray-light">
-              Give this guild its own thread of{" "}
-              <span className="text-guild">Evolutionary Purpose</span> and{" "}
-              <span className="text-guild">Pattern Integrity</span>, echoing the Sky Masons
-              Trust Manifesto. Not required to seed the guild.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setEthosOpen(true)}
-                className="rounded-lg border border-guild/50 px-3 py-1.5 text-xs font-medium text-guild transition-colors hover:bg-guild/10"
-              >
-                Set this up now
-              </button>
-              <span className="text-xs text-faint">or skip — add it later from Guild Settings</span>
-            </div>
-          </div>
-        ) : (
-          <>
-            <EthosFields
-              evolutionaryPurpose={evolutionaryPurpose}
-              onEvolutionaryPurposeChange={setEvolutionaryPurpose}
-              patternIntegrity={patternIntegrity}
-              onPatternIntegrityChange={setPatternIntegrity}
-            />
-            <button
-              type="button"
-              onClick={() => setEthosOpen(false)}
-              className="mt-2 text-xs text-faint transition-colors hover:text-gray-light"
-            >
-              Collapse — I&apos;ll finish this later
-            </button>
-          </>
-        )}
+        <EthosFields
+          evolutionaryPurpose={evolutionaryPurpose}
+          onEvolutionaryPurposeChange={setEvolutionaryPurpose}
+          patternIntegrity={patternIntegrity}
+          onPatternIntegrityChange={setPatternIntegrity}
+        />
+        <p className="mt-2 text-xs text-faint">
+          Echoes the Sky Masons Trust Manifesto. Leave blank and add it later from Guild Settings.
+        </p>
       </div>
 
       <div>
