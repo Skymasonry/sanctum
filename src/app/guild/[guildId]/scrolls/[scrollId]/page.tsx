@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation"
 import { FileText } from "lucide-react"
 
-import { ChamberHeader } from "@/components/shared"
+import { ChamberHeader, ChamberScroll } from "@/components/shared"
 import { ScrollDetail } from "@/components/scrolls/ScrollDetail"
 import { getUser } from "@/lib/auth"
 import { getGuild } from "@/lib/guilds"
 import { getScroll, listSubmissions } from "@/lib/scrolls"
+import { isGuildManager } from "@/types/guild"
 
 interface ScrollPageProps {
   params: Promise<{ guildId: string; scrollId: string }>
@@ -20,24 +21,22 @@ export default async function ScrollPage({ params }: ScrollPageProps) {
   const scroll = await getScroll(scrollId)
   if (!scroll || scroll.guildId !== guildId) notFound()
 
-  const isSeeder = user?.username === guild.seederUid
+  const isSeeder = isGuildManager(guild, user?.username)
   const submissions = isSeeder ? await listSubmissions(scrollId) : []
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="scrollbar-none h-full min-h-0 flex-1 overflow-y-auto p-6 lg:p-8">
-        <ChamberHeader
-          backHref={`/guild/${guildId}/scrolls`}
-          icon={<FileText className="h-10 w-10 text-guild" />}
-          title={scroll.title}
-        />
-        <ScrollDetail
-          scroll={scroll}
-          submissions={submissions}
-          isSeeder={isSeeder}
-          currentUser={user?.username ?? ""}
-        />
-      </div>
-    </div>
+    <ChamberScroll>
+      <ChamberHeader
+        backHref={`/guild/${guildId}/scrolls`}
+        icon={<FileText className="h-10 w-10 text-guild" />}
+        title={scroll.title}
+      />
+      <ScrollDetail
+        scroll={scroll}
+        submissions={submissions}
+        isSeeder={isSeeder}
+        currentUser={user?.username ?? ""}
+      />
+    </ChamberScroll>
   )
 }

@@ -165,6 +165,42 @@ export async function PATCH(
   return NextResponse.json({ ok: true })
 }
 
+/**
+ * DELETE /api/guilds/{guildId} — seeder or steward only. Requires the
+ * request body's `confirmName` to match the guild's actual name, as a
+ * server-side backstop against an accidental call beyond whatever
+ * confirmation the client already did.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ guildId: string }> },
+) {
+  const auth = await getAuthHeaders()
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { guildId } = await params
+
+  const guild = await getGuild(guildId)
+  if (!guild) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!isGuildManager(guild, auth["X-Authentik-Username"])) {
+    return NextResponse.json({ error: "Seeder or steward only" }, { status: 403 })
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { confirmName?: string }
+  if (body.confirmName !== guild.name) {
+    return NextResponse.json({ error: "Name confirmation didn't match" }, { status: 400 })
+  }
+
+  const { deleteGuild } = await import("@/lib/guild-writes")
+  try {
+    const ok = await deleteGuild(guildId, auth)
+    if (!ok) return NextResponse.json({ error: "Guild not found" }, { status: 404 })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Failed to delete guild:", error)
+    return NextResponse.json({ error: "Failed to delete guild" }, { status: 500 })
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }

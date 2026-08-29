@@ -3,6 +3,7 @@ import Link from "next/link"
 import { ArrowLeft, Mail, Globe, UserPlus } from "lucide-react"
 
 import { ProfileEditor } from "@/components/profile/ProfileEditor"
+import { ChamberScroll } from "@/components/shared"
 import { getUser } from "@/lib/auth"
 import { getProfile } from "@/lib/profiles"
 import { fetchAccountAPI } from "@/lib/account-api"
@@ -62,8 +63,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     : [null, []]
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="scrollbar-none mx-auto h-full w-full min-h-0 max-w-2xl flex-1 overflow-y-auto p-6 lg:p-8">
+    <ChamberScroll maxWidth="max-w-2xl">
         <Link href="/" className="mb-4 inline-flex items-center gap-2 text-xs text-gray transition hover:text-white">
           <ArrowLeft className="h-3.5 w-3.5" />
           Back
@@ -133,7 +133,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <ProfileEditor profile={profile} />
           </div>
         )}
-      </div>
-    </div>
+    </ChamberScroll>
   )
 }

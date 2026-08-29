@@ -56,17 +56,21 @@ function extractSpaceResult(type: SpaceType, raw: unknown): ProvisionSpaceResult
   const nested = (key: string): Record<string, unknown> =>
     (obj[key] && typeof obj[key] === "object" ? (obj[key] as Record<string, unknown>) : {})
 
+  // Confirmed actual shape (from server logs): { success, space: {...} }.
+  // The other lookups are kept as fallbacks in case that ever changes.
+  const space = nested("space")
+
   if (type === "chat") {
-    const token = obj.talkRoom ?? obj.token ?? obj.roomToken ?? nested("room").token
+    const token = space.talkRoom ?? obj.talkRoom ?? obj.token ?? obj.roomToken ?? nested("room").token
     return typeof token === "string" && token ? { talkRoom: token } : {}
   }
   if (type === "calendar") {
-    const uri = obj.calendarUri ?? obj.uri ?? nested("calendar").uri
+    const uri = space.calendarUri ?? obj.calendarUri ?? obj.uri ?? nested("calendar").uri
     return typeof uri === "string" && uri ? { calendarUri: uri } : {}
   }
   const folder = nested("folder")
-  const id = obj.folderId ?? folder.id
-  const name = obj.folderName ?? folder.name
+  const id = space.folderId ?? obj.folderId ?? folder.id
+  const name = space.folderName ?? obj.folderName ?? folder.name
   return {
     ...(typeof id === "number" ? { folderId: id } : {}),
     ...(typeof name === "string" && name ? { folderName: name } : {}),
