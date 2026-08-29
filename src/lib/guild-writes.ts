@@ -257,6 +257,8 @@ export interface UpdateGuildInfoInput {
   icon?: string
   color?: string
   admission?: "open" | "closed" | "mandatory"
+  evolutionaryPurpose?: string
+  patternIntegrity?: string
 }
 
 /**
@@ -274,6 +276,8 @@ export async function updateGuildInfo(
   if (patch.icon !== undefined) { sets.push(`icon = $${n++}`); params.push(patch.icon) }
   if (patch.color !== undefined) { sets.push(`color = $${n++}`); params.push(patch.color) }
   if (patch.admission !== undefined) { sets.push(`admission = $${n++}`); params.push(patch.admission) }
+  if (patch.evolutionaryPurpose !== undefined) { sets.push(`evolutionary_purpose = $${n++}`); params.push(patch.evolutionaryPurpose) }
+  if (patch.patternIntegrity !== undefined) { sets.push(`pattern_integrity = $${n++}`); params.push(patch.patternIntegrity) }
   if (sets.length === 0) return false
   params.push(guildId)
   const res = await db.query(
