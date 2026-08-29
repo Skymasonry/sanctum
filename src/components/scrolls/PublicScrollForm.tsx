@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 
 import type { Scroll } from "@/lib/scrolls"
+import { ContentBlocksView } from "./ContentBlocksView"
 import { QuestionInput } from "./QuestionInput"
 
 interface PublicScrollFormProps {
@@ -79,10 +80,14 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         </div>
       )}
 
-      {scroll.description && (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
-          {scroll.description}
-        </p>
+      {scroll.contentBlocks.length > 0 ? (
+        <ContentBlocksView blocks={scroll.contentBlocks} />
+      ) : (
+        scroll.description && (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
+            {scroll.description}
+          </p>
+        )
       )}
 
       {!emailQuestion && (

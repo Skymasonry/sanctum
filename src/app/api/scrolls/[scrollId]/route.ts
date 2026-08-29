@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
 
 import { getGuild } from "@/lib/guilds"
-import { deleteScroll, getScroll, updateScroll } from "@/lib/scrolls"
+import { deleteScroll, getScroll, updateScroll, type ContentBlock } from "@/lib/scrolls"
 
 async function username(): Promise<string | null> {
   const h = await headers()
@@ -57,6 +57,7 @@ export async function PATCH(
     headerImageUrl?: string | null
     autoJoinGuild?: boolean
     publicAccess?: boolean
+    contentBlocks?: ContentBlock[]
   }
   const ok = await updateScroll(scrollId, body)
   return NextResponse.json({ success: ok })

@@ -2,9 +2,11 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Trash2, Upload, Copy, Check } from "lucide-react"
+import { Plus, Trash2, Upload, Copy, Check, Pencil } from "lucide-react"
 
 import type { Scroll, ScrollSubmission, QuestionType } from "@/lib/scrolls"
+import { ContentBlocksEditor } from "./ContentBlocksEditor"
+import { ContentBlocksView } from "./ContentBlocksView"
 import { QuestionInput } from "./QuestionInput"
 
 interface Props {
@@ -31,6 +33,7 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
   const [submitOK, setSubmitOK] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [copied, setCopied] = useState(false)
+  const [editingContent, setEditingContent] = useState(false)
 
   // Seeder-only question builder state
   const [newQ, setNewQ] = useState("")
@@ -149,10 +152,14 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
         </div>
       )}
 
-      {scroll.description && (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
-          {scroll.description}
-        </p>
+      {scroll.contentBlocks.length > 0 ? (
+        <ContentBlocksView blocks={scroll.contentBlocks} />
+      ) : (
+        scroll.description && (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
+            {scroll.description}
+          </p>
+        )
       )}
 
       {isSeeder && (
@@ -178,10 +185,29 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
               {scroll.headerImageUrl ? "Replace header image" : "Add header image"}
             </button>
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadHeaderImage} className="hidden" />
+            <button
+              type="button"
+              onClick={() => setEditingContent(v => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-dark px-3 py-1.5 text-xs text-gray-light transition hover:border-guild/50 hover:bg-guild/10"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {editingContent ? "Close editor" : "Design page content"}
+            </button>
             <span className="font-mono text-[10px] text-faint">
               {submissions.length} submission{submissions.length === 1 ? "" : "s"}
             </span>
           </div>
+
+          {editingContent && (
+            <ContentBlocksEditor
+              scrollId={scroll.id}
+              initialBlocks={scroll.contentBlocks}
+              onSaved={() => {
+                setEditingContent(false)
+                router.refresh()
+              }}
+            />
+          )}
 
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-light">
             <input

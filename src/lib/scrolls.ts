@@ -12,6 +12,14 @@ export interface ScrollQuestion {
   options: string[]
 }
 
+export type ContentBlockType = "heading" | "body"
+
+export interface ContentBlock {
+  id: string
+  type: ContentBlockType
+  text: string
+}
+
 export interface Scroll {
   id: string
   guildId: string
@@ -24,6 +32,7 @@ export interface Scroll {
   headerImageUrl: string | null
   autoJoinGuild: boolean
   publicAccess: boolean
+  contentBlocks: ContentBlock[]
   questions: ScrollQuestion[]
 }
 
@@ -48,10 +57,11 @@ interface ScrollMetaRow {
   header_image_url: string | null
   auto_join_guild: boolean
   public_access: boolean
+  content_blocks: unknown
 }
 
 const SCROLL_COLUMNS = `id, guild_id, title, description, created_by, created_at, updated_at,
-       published, header_image_url, auto_join_guild, public_access`
+       published, header_image_url, auto_join_guild, public_access, content_blocks`
 
 function rowToScrollMeta(m: ScrollMetaRow) {
   return {
@@ -63,6 +73,7 @@ function rowToScrollMeta(m: ScrollMetaRow) {
     createdAt: m.created_at.toISOString(),
     updatedAt: m.updated_at.toISOString(),
     published: m.published,
+    contentBlocks: Array.isArray(m.content_blocks) ? (m.content_blocks as ContentBlock[]) : [],
     headerImageUrl: m.header_image_url,
     autoJoinGuild: m.auto_join_guild,
     publicAccess: m.public_access,
@@ -141,6 +152,7 @@ export async function updateScroll(
     headerImageUrl?: string | null
     autoJoinGuild?: boolean
     publicAccess?: boolean
+    contentBlocks?: ContentBlock[]
   },
 ): Promise<boolean> {
   const sets: string[] = []
@@ -152,6 +164,7 @@ export async function updateScroll(
   if (patch.headerImageUrl !== undefined) { sets.push(`header_image_url = $${n++}`); params.push(patch.headerImageUrl) }
   if (patch.autoJoinGuild !== undefined) { sets.push(`auto_join_guild = $${n++}`); params.push(patch.autoJoinGuild) }
   if (patch.publicAccess !== undefined) { sets.push(`public_access = $${n++}`); params.push(patch.publicAccess) }
+  if (patch.contentBlocks !== undefined) { sets.push(`content_blocks = $${n++}::jsonb`); params.push(JSON.stringify(patch.contentBlocks)) }
   if (sets.length === 0) return true
   sets.push(`updated_at = NOW()`)
   params.push(scrollId)
