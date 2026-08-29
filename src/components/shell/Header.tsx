@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { LogOut } from "lucide-react"
+import { LogOut, Settings } from "lucide-react"
 
 interface HeaderProps {
   user: {
@@ -25,6 +25,14 @@ export function Header({ user }: HeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-end gap-3.5 px-5">
       <span className="text-[13px] font-light text-white/45">{user.name}</span>
+      <Link
+        href="/settings"
+        aria-label="Settings"
+        title="Settings"
+        className="text-white/35 transition-colors hover:text-white/70"
+      >
+        <Settings className="h-4 w-4" />
+      </Link>
       <Link href="/settings" className="transition-opacity hover:opacity-80">
         {imgFailed ? (
           <div
