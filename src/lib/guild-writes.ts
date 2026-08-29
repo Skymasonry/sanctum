@@ -36,6 +36,82 @@ async function syncGuildInNextcloud(
   }
 }
 
+export type SpaceType = "chat" | "calendar" | "folder"
+
+export interface ProvisionSpaceResult {
+  talkRoom?: string
+  calendarUri?: string
+  folderId?: number
+  folderName?: string
+}
+
+/**
+ * Pull a value out of skymasonsnav's response by trying a few plausible
+ * key names/shapes. The PHP app predates the native Postgres layer and
+ * its response shape isn't documented anywhere in this repo, so this
+ * stays defensive rather than assuming one exact contract.
+ */
+function extractSpaceResult(type: SpaceType, raw: unknown): ProvisionSpaceResult {
+  const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+  const nested = (key: string): Record<string, unknown> =>
+    (obj[key] && typeof obj[key] === "object" ? (obj[key] as Record<string, unknown>) : {})
+
+  if (type === "chat") {
+    const token = obj.talkRoom ?? obj.token ?? obj.roomToken ?? nested("room").token
+    return typeof token === "string" && token ? { talkRoom: token } : {}
+  }
+  if (type === "calendar") {
+    const uri = obj.calendarUri ?? obj.uri ?? nested("calendar").uri
+    return typeof uri === "string" && uri ? { calendarUri: uri } : {}
+  }
+  const folder = nested("folder")
+  const id = obj.folderId ?? folder.id
+  const name = obj.folderName ?? folder.name
+  return {
+    ...(typeof id === "number" ? { folderId: id } : {}),
+    ...(typeof name === "string" && name ? { folderName: name } : {}),
+  }
+}
+
+/**
+ * Provision (or re-fetch) a chamber's underlying Nextcloud resource via
+ * skymasonsnav, then persist whatever comes back onto the guild row.
+ *
+ * Previously the API route only proxied skymasonsnav's response to the
+ * client without saving it — the resource would (maybe) get created in
+ * Nextcloud, but Postgres never learned its id, so the chamber looked
+ * "unprovisioned" forever after refresh. This is now the single place
+ * that both calls skymasonsnav and writes the result back.
+ */
+export async function provisionSpace(
+  guildId: string,
+  type: SpaceType,
+  authHeaders: Record<string, string>,
+): Promise<ProvisionSpaceResult> {
+  const raw = await postToNextcloud(
+    `/apps/skymasonsnav/api/orders/${guildId}/spaces`,
+    { type },
+    { headers: authHeaders },
+  )
+  const result = extractSpaceResult(type, raw)
+  if (Object.keys(result).length === 0) {
+    console.error(`provisionSpace(${guildId}, ${type}): couldn't find a usable field in response`, raw)
+    return result
+  }
+
+  const sets: string[] = []
+  const params: unknown[] = []
+  let n = 1
+  if (result.talkRoom !== undefined) { sets.push(`talk_room = $${n++}`); params.push(result.talkRoom) }
+  if (result.calendarUri !== undefined) { sets.push(`calendar_uri = $${n++}`); params.push(result.calendarUri) }
+  if (result.folderId !== undefined) { sets.push(`folder_id = $${n++}`); params.push(result.folderId) }
+  if (result.folderName !== undefined) { sets.push(`folder_name = $${n++}`); params.push(result.folderName) }
+  params.push(guildId)
+  await db.query(`UPDATE guilds SET ${sets.join(", ")} WHERE id = $${n}`, params)
+
+  return result
+}
+
 export interface CreateGuildInput {
   name: string
   description?: string
@@ -121,6 +197,24 @@ export async function createGuild(
   }
 
   await syncGuildInNextcloud(id, authHeaders)
+
+  // Auto-populate chat + calendar so a fresh guild isn't a wall of
+  // "unprovisioned" chambers. Best-effort: a Nextcloud hiccup here
+  // shouldn't fail guild creation — the seeder can still provision
+  // manually from the chamber if this doesn't land.
+  const autoProvision: Array<[ChamberId, SpaceType]> = [
+    ["pulse", "chat"],
+    ["rites", "calendar"],
+  ]
+  for (const [chamber, spaceType] of autoProvision) {
+    if (!chambers.includes(chamber)) continue
+    try {
+      await provisionSpace(id, spaceType, authHeaders)
+    } catch (err) {
+      console.error(`auto-provision ${spaceType} for ${id} failed:`, err)
+    }
+  }
+
   return id
 }
 
