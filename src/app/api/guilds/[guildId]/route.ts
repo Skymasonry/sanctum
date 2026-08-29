@@ -156,6 +156,8 @@ export async function PATCH(
     icon?: string
     color?: string
     admission?: "open" | "closed" | "mandatory"
+    evolutionaryPurpose?: string
+    patternIntegrity?: string
   }
   const ok = await updateGuildInfo(guildId, body)
   if (!ok) return NextResponse.json({ error: "Nothing to update" }, { status: 400 })

@@ -34,12 +34,14 @@ export default async function GuildSettingsPage({ params }: GuildSettingsPagePro
       <section className="mt-2 glass-light rounded-[var(--card-radius)] p-5">
         <h2 className="mb-1 font-display text-lg tracking-wide text-white">Guild info</h2>
         <p className="mb-4 text-sm text-gray">
-          Name and purpose shown on the guild home and in Discover.
+          Name, purpose, and ethos shown on the guild home and in Discover.
         </p>
         <InfoSettings
           guildId={guildId}
           initialName={guild.name}
           initialDescription={guild.description}
+          initialEvolutionaryPurpose={guild.evolutionaryPurpose ?? ""}
+          initialPatternIntegrity={guild.patternIntegrity ?? ""}
         />
       </section>
 
