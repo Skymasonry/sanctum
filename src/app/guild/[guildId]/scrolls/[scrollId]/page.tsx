@@ -24,18 +24,20 @@ export default async function ScrollPage({ params }: ScrollPageProps) {
   const submissions = isSeeder ? await listSubmissions(scrollId) : []
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
-      <ChamberHeader
-        backHref={`/guild/${guildId}/scrolls`}
-        icon={<FileText className="h-10 w-10 text-guild" />}
-        title={scroll.title}
-      />
-      <ScrollDetail
-        scroll={scroll}
-        submissions={submissions}
-        isSeeder={isSeeder}
-        currentUser={user?.username ?? ""}
-      />
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="scrollbar-none h-full min-h-0 flex-1 overflow-y-auto p-6 lg:p-8">
+        <ChamberHeader
+          backHref={`/guild/${guildId}/scrolls`}
+          icon={<FileText className="h-10 w-10 text-guild" />}
+          title={scroll.title}
+        />
+        <ScrollDetail
+          scroll={scroll}
+          submissions={submissions}
+          isSeeder={isSeeder}
+          currentUser={user?.username ?? ""}
+        />
+      </div>
     </div>
   )
 }
