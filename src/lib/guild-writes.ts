@@ -190,6 +190,13 @@ export async function createGuild(
         [id, JSON.stringify(input.applicationForm.agreements ?? [])],
       )
     }
+    // The seeder starts as a steward too — otherwise a brand-new guild
+    // would launch with nobody able to manage it until someone edits
+    // the DB directly. They (or any steward) can add/remove from there.
+    await db.query(
+      `INSERT INTO guild_stewards (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [id, seederUid],
+    )
     await db.query("COMMIT")
   } catch (err) {
     await db.query("ROLLBACK")
@@ -393,6 +400,28 @@ export async function updateGuildChambers(
   const res = await db.query(
     `UPDATE guilds SET chambers = $2::text[] WHERE id = $1`,
     [guildId, clean],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+/**
+ * Add a steward — idempotent, any number allowed. Unlike seederUid
+ * (single, set at creation), stewardship is a plain many-to-many table
+ * so it can be granted/revoked freely by whoever currently manages the
+ * guild (seeder or an existing steward — enforced by the caller).
+ */
+export async function addSteward(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `INSERT INTO guild_stewards (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+export async function removeSteward(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `DELETE FROM guild_stewards WHERE guild_id = $1 AND lower(user_id) = lower($2)`,
+    [guildId, userId],
   )
   return (res.rowCount ?? 0) > 0
 }

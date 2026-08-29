@@ -21,7 +21,10 @@ export interface Guild {
   icon: string
   color: string
   admission: "open" | "closed" | "mandatory"
+  /** The founding seeder — one per guild, set at creation, historical. */
   seederUid: string
+  /** Ongoing pattern-integrity holders — zero or more, editable by current stewards or the seeder. */
+  stewardUids: string[]
   members: string[]
   pending: string[]
   applications?: GuildApplication[]
@@ -48,4 +51,16 @@ export interface Guild {
 export interface GuildContextValue {
   guild: Guild | null
   isLoading: boolean
+}
+
+/**
+ * Whether a user can manage this guild — the founding seeder or any
+ * current steward. Used everywhere a "seeder only" action lives
+ * (settings, chambers, scroll editing, application review).
+ */
+export function isGuildManager(guild: Guild, username: string | undefined | null): boolean {
+  if (!username) return false
+  const u = username.toLowerCase()
+  if (guild.seederUid.toLowerCase() === u) return true
+  return guild.stewardUids.some(s => s.toLowerCase() === u)
 }

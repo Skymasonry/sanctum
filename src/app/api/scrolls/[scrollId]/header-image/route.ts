@@ -6,6 +6,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { getGuild } from "@/lib/guilds"
 import { getScroll } from "@/lib/scrolls"
 import { S3_BUCKET, publicObjectUrl, s3, scrollHeaderKey } from "@/lib/s3"
+import { isGuildManager } from "@/types/guild"
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB — a banner image, not a thumbnail
 
@@ -36,8 +37,8 @@ export async function POST(
   const scroll = await getScroll(scrollId)
   if (!scroll) return NextResponse.json({ error: "Not found" }, { status: 404 })
   const guild = await getGuild(scroll.guildId)
-  if (!guild || username.toLowerCase() !== guild.seederUid.toLowerCase()) {
-    return NextResponse.json({ error: "Seeder only" }, { status: 403 })
+  if (!guild || !isGuildManager(guild, username)) {
+    return NextResponse.json({ error: "Seeder or steward only" }, { status: 403 })
   }
 
   const form = await request.formData()

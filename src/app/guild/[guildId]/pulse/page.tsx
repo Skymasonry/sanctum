@@ -5,6 +5,7 @@ import { ChatInput } from "@/components/pulse/ChatInput"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
 import { getMessages } from "@/lib/talk"
+import { isGuildManager } from "@/types/guild"
 import { notFound } from "next/navigation"
 
 interface PulsePageProps {
@@ -34,7 +35,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
           spaceType="chat"
           chamberLabel="chat room"
           bodyLine="Chat is optional per guild. The seeder can open one now."
-          isSeeder={user?.username === guild.seederUid}
+          isSeeder={isGuildManager(guild, user?.username)}
         />
       </div>
     )

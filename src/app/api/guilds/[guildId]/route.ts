@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from "next/server"
 import http, { type RequestOptions } from "http"
 
 import { getGuild } from "@/lib/guilds"
+import { isGuildManager } from "@/types/guild"
 
 const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80"
 
@@ -27,8 +28,8 @@ async function requireSeeder(
   if (!guild) {
     return { ok: false, response: NextResponse.json({ error: "Not found" }, { status: 404 }) }
   }
-  if (callerUsername.toLowerCase() !== guild.seederUid.toLowerCase()) {
-    return { ok: false, response: NextResponse.json({ error: "Seeder only" }, { status: 403 }) }
+  if (!isGuildManager(guild, callerUsername)) {
+    return { ok: false, response: NextResponse.json({ error: "Seeder or steward only" }, { status: 403 }) }
   }
   return { ok: true }
 }

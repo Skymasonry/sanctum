@@ -7,6 +7,7 @@ import { QuestBoard } from "@/components/quests/QuestBoard"
 import { getUser } from "@/lib/auth"
 import { getGuild } from "@/lib/guilds"
 import { getBoardForGuild } from "@/lib/quests"
+import { isGuildManager } from "@/types/guild"
 
 interface QuestsPageProps {
   params: Promise<{ guildId: string }>
@@ -41,7 +42,7 @@ export default async function QuestsPage({ params }: QuestsPageProps) {
             <div className="mt-6">
               <ProvisionQuestsButton
                 guildId={guildId}
-                isSeeder={user?.username === guild.seederUid}
+                isSeeder={isGuildManager(guild, user?.username)}
               />
             </div>
           </div>
