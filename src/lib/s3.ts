@@ -62,3 +62,7 @@ export function publicObjectUrl(key: string): string {
 export function guildIconKey(iconId: string, ext = "png"): string {
   return `sanctum/guild-icons/${iconId}.${ext}`
 }
+
+export function scrollHeaderKey(imageId: string, ext = "jpg"): string {
+  return `sanctum/scroll-headers/${imageId}.${ext}`
+}

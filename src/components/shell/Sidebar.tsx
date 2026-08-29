@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
-import { Compass, Mountain, Plus, ExternalLink, MessageSquare, Scroll } from "lucide-react"
+import { Compass, Plus, ExternalLink, MessageSquare, Scroll } from "lucide-react"
 import { GuildIcon } from "@/components/shared"
 import { cn } from "@/lib/utils"
 import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
@@ -132,18 +132,6 @@ export function Sidebar({ guilds }: SidebarProps) {
           aria-label="Discover guilds"
         >
           <Compass className="h-[14px] w-[14px]" strokeWidth={2.5} />
-        </Link>
-        <Link
-          href="/apply/from-sky-to-stone"
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-[10px] text-gold/60 transition-all duration-150",
-            "hover:bg-white/08 hover:text-gold",
-            pathname === "/apply/from-sky-to-stone" && "bg-white/08 text-gold",
-          )}
-          title="From Sky To Stone — apply / update"
-          aria-label="From Sky To Stone — apply or update your details"
-        >
-          <Mountain className="h-[14px] w-[14px]" strokeWidth={2.5} />
         </Link>
         <div className="mt-1 mb-1 h-px w-8 bg-white/10" />
         <InviteButton />

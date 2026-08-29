@@ -29,7 +29,6 @@ export default async function ScrollPage({ params }: ScrollPageProps) {
         backHref={`/guild/${guildId}/scrolls`}
         icon={<FileText className="h-10 w-10 text-guild" />}
         title={scroll.title}
-        subtitle={scroll.description || undefined}
       />
       <ScrollDetail
         scroll={scroll}
