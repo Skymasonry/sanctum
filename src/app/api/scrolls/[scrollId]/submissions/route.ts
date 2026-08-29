@@ -2,7 +2,9 @@ import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
 
 import { addMember } from "@/lib/guild-writes"
+import { getGuild } from "@/lib/guilds"
 import { getScroll, listSubmissions, submitScroll } from "@/lib/scrolls"
+import { canReviewSubmissions } from "@/types/guild"
 
 async function authHeaders(): Promise<Record<string, string> | null> {
   const h = await headers()
@@ -22,6 +24,14 @@ export async function GET(
   const auth = await authHeaders()
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { scrollId } = await params
+
+  const scroll = await getScroll(scrollId)
+  if (!scroll) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const guild = await getGuild(scroll.guildId)
+  if (!guild || !canReviewSubmissions(guild, auth["X-Authentik-Username"])) {
+    return NextResponse.json({ error: "Leadership Circle or manager only" }, { status: 403 })
+  }
+
   const submissions = await listSubmissions(scrollId)
   return NextResponse.json({ submissions })
 }

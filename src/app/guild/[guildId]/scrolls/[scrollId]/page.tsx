@@ -6,7 +6,7 @@ import { ScrollDetail } from "@/components/scrolls/ScrollDetail"
 import { getUser } from "@/lib/auth"
 import { getGuild } from "@/lib/guilds"
 import { getScroll, listSubmissions } from "@/lib/scrolls"
-import { isGuildManager } from "@/types/guild"
+import { canReviewSubmissions, isGuildManager } from "@/types/guild"
 
 interface ScrollPageProps {
   params: Promise<{ guildId: string; scrollId: string }>
@@ -22,7 +22,8 @@ export default async function ScrollPage({ params }: ScrollPageProps) {
   if (!scroll || scroll.guildId !== guildId) notFound()
 
   const isSeeder = isGuildManager(guild, user?.username)
-  const submissions = isSeeder ? await listSubmissions(scrollId) : []
+  const canReview = canReviewSubmissions(guild, user?.username)
+  const submissions = canReview ? await listSubmissions(scrollId) : []
 
   return (
     <ChamberScroll>
@@ -35,6 +36,7 @@ export default async function ScrollPage({ params }: ScrollPageProps) {
         scroll={scroll}
         submissions={submissions}
         isSeeder={isSeeder}
+        canReviewSubmissions={canReview}
         currentUser={user?.username ?? ""}
       />
     </ChamberScroll>

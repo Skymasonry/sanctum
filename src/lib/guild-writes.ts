@@ -128,6 +128,8 @@ export interface CreateGuildInput {
   chambers?: ChamberId[]
   applicationForm?: { agreements: Array<{ id: number; text: string }> }
   inviteMembers?: string[]
+  /** Optional at creation — named "other masons," not required to seed a guild. */
+  leadershipCircle?: string[]
 }
 
 /**
@@ -201,6 +203,12 @@ export async function createGuild(
       `INSERT INTO guild_stewards (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [id, seederUid],
     )
+    for (const uid of input.leadershipCircle ?? []) {
+      await db.query(
+        `INSERT INTO guild_leadership_circle (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [id, uid],
+      )
+    }
     await db.query("COMMIT")
   } catch (err) {
     await db.query("ROLLBACK")
@@ -425,6 +433,26 @@ export async function addSteward(guildId: string, userId: string): Promise<boole
 export async function removeSteward(guildId: string, userId: string): Promise<boolean> {
   const res = await db.query(
     `DELETE FROM guild_stewards WHERE guild_id = $1 AND lower(user_id) = lower($2)`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+/**
+ * Leadership Circle add/remove — unlike stewards, only a guild manager
+ * (seeder/steward) can call these; the circle itself doesn't self-govern.
+ */
+export async function addLeadershipCircleMember(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `INSERT INTO guild_leadership_circle (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+export async function removeLeadershipCircleMember(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `DELETE FROM guild_leadership_circle WHERE guild_id = $1 AND lower(user_id) = lower($2)`,
     [guildId, userId],
   )
   return (res.rowCount ?? 0) > 0
