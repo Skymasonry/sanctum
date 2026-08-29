@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from "next/server"
 
 import { getGuild } from "@/lib/guilds"
 import { deleteScroll, getScroll, updateScroll, type ContentBlock } from "@/lib/scrolls"
+import { isGuildManager } from "@/types/guild"
 
 async function username(): Promise<string | null> {
   const h = await headers()
@@ -18,8 +19,8 @@ async function requireSeeder(
     return { ok: false, response: NextResponse.json({ error: "Not found" }, { status: 404 }) }
   }
   const guild = await getGuild(scroll.guildId)
-  if (!guild || callerUsername.toLowerCase() !== guild.seederUid.toLowerCase()) {
-    return { ok: false, response: NextResponse.json({ error: "Seeder only" }, { status: 403 }) }
+  if (!guild || !isGuildManager(guild, callerUsername)) {
+    return { ok: false, response: NextResponse.json({ error: "Seeder or steward only" }, { status: 403 }) }
   }
   return { ok: true }
 }

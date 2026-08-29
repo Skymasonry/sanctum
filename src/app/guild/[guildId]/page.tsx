@@ -7,6 +7,7 @@ import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
 import { determineFocus } from "@/lib/focus"
 import { getChamberNotifications } from "@/lib/notifications"
+import { isGuildManager } from "@/types/guild"
 import { notFound } from "next/navigation"
 import { GuildThresholdClient } from "./GuildThresholdClient"
 
@@ -48,8 +49,7 @@ export default async function ThresholdPage({ params }: ThresholdPageProps) {
     ? `/guild/${guildId}/scrolls`
     : `/guild/${guildId}/pulse`
 
-  const isSeeder = !!(user?.username && guild.seederUid &&
-    user.username.toLowerCase() === guild.seederUid.toLowerCase())
+  const isSeeder = isGuildManager(guild, user?.username)
 
   return (
     <GuildThresholdClient guild={guild} isSeeder={isSeeder}>

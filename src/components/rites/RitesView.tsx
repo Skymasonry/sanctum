@@ -413,6 +413,7 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
 
   const [title, setTitle] = useState("")
   const [date, setDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [startTime, setStartTime] = useState("10:00")
   const [endTime, setEndTime] = useState("11:00")
   const [untilDate, setUntilDate] = useState("")
@@ -439,7 +440,7 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
   }, [calendarUri])
 
   const resetForm = () => {
-    setTitle(""); setDate(""); setStartTime("10:00"); setEndTime("11:00"); setUntilDate("")
+    setTitle(""); setDate(""); setEndDate(""); setStartTime("10:00"); setEndTime("11:00"); setUntilDate("")
     setDescription(""); setLocation(""); setAllDay(false); setRecurrence(""); setAlarm("")
     setStatus("CONFIRMED"); setLinks([]); setShowFilePicker(false); setShowFormPicker(false)
     setEditingUid(null)
@@ -457,13 +458,25 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
 
     const startDt = new Date(event.start)
     const pad = (n: number) => n.toString().padStart(2, "0")
-    setDate(`${startDt.getFullYear()}-${pad(startDt.getMonth() + 1)}-${pad(startDt.getDate())}`)
+    const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    setDate(fmtDate(startDt))
+    setEndDate("")
 
-    if (!event.allDay) {
+    if (event.allDay) {
+      if (event.end) {
+        // DTEND on an all-day event is exclusive (the day after the
+        // event's last day) — subtract a day to show the last day the
+        // event actually runs.
+        const endDt = new Date(event.end)
+        endDt.setDate(endDt.getDate() - 1)
+        if (fmtDate(endDt) !== fmtDate(startDt)) setEndDate(fmtDate(endDt))
+      }
+    } else {
       setStartTime(`${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`)
       if (event.end) {
         const endDt = new Date(event.end)
         setEndTime(`${pad(endDt.getHours())}:${pad(endDt.getMinutes())}`)
+        if (fmtDate(endDt) !== fmtDate(startDt)) setEndDate(fmtDate(endDt))
       } else { setEndTime("") }
     }
 
@@ -503,8 +516,21 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
     setSubmitting(true); setError(null)
     try {
       let startISO: string; let endISO: string | undefined
-      if (allDay) { startISO = date }
-      else { startISO = new Date(`${date}T${startTime}`).toISOString(); if (endTime) endISO = new Date(`${date}T${endTime}`).toISOString() }
+      if (allDay) {
+        startISO = date
+        if (endDate && endDate !== date) {
+          // DTEND on an all-day event is exclusive per iCal — send the
+          // day after the chosen last day so the event visually spans
+          // through it (see handleEdit for the inverse conversion).
+          const exclusiveEnd = new Date(`${endDate}T00:00:00`)
+          exclusiveEnd.setDate(exclusiveEnd.getDate() + 1)
+          endISO = toLocalDate(exclusiveEnd)
+        }
+      } else {
+        startISO = new Date(`${date}T${startTime}`).toISOString()
+        const effectiveEndDate = endDate || date
+        if (endTime) endISO = new Date(`${effectiveEndDate}T${endTime}`).toISOString()
+      }
 
       const body: Record<string, string | boolean | number> = { title, start: startISO }
       if (endISO) body.end = endISO
@@ -657,7 +683,7 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
             <div>
               <label className="mb-1 block text-sm text-gray">Date</label>
               <div className="flex items-center gap-2">
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputClass + " flex-1"} />
+                <input type="date" value={date} onChange={(e) => { setDate(e.target.value); if (endDate && endDate < e.target.value) setEndDate(e.target.value) }} required className={inputClass + " flex-1"} />
                 <div className="flex gap-1.5">
                   {(["today", "tomorrow", "nextWeek"] as const).map((q) => (
                     <button key={q} type="button" onClick={() => setQuickDate(q)}
@@ -670,6 +696,11 @@ export function RitesView({ guildId, guildName, calendarUri, initialEvents, talk
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-gray">End date (optional — for multi-day events)</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={date || undefined} className={inputClass} />
             </div>
 
             {!allDay && (

@@ -148,7 +148,7 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
       {scroll.headerImageUrl && (
         <div className="overflow-hidden rounded-lg border border-gray-dark">
           {/* eslint-disable-next-line @next/next/no-img-element -- external S3 URL, no next/image loader configured for it */}
-          <img src={scroll.headerImageUrl} alt="" className="h-48 w-full object-cover" />
+          <img src={scroll.headerImageUrl} alt="" className="h-72 w-full object-cover" />
         </div>
       )}
 
