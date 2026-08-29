@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
-  ChevronLeft, Settings, User, UserPlus, Copy, Check, Trash2, X, AlertTriangle,
+  ChevronLeft, Settings, User, UserPlus, Copy, Check, Trash2, X, AlertTriangle, Bell, BellOff,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -32,6 +32,85 @@ export default function SettingsPage() {
   const [confirmText, setConfirmText] = useState("")
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushStandalone, setPushStandalone] = useState(true)
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true
+    setPushStandalone(!isIOS || isStandalone)
+    const supported = "serviceWorker" in navigator && "PushManager" in window
+    setPushSupported(supported)
+    if (!supported) return
+    navigator.serviceWorker.ready.then(reg =>
+      reg.pushManager.getSubscription().then(sub => setPushSubscribed(!!sub))
+    )
+  }, [])
+
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+    for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i)
+    return outputArray
+  }
+
+  const enableNotifications = async () => {
+    setPushBusy(true)
+    setPushError(null)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== "granted") throw new Error("Permission was denied")
+      const reg = await navigator.serviceWorker.ready
+      const keyRes = await fetch("/api/push/vapid-public-key")
+      const keyData = await keyRes.json()
+      if (!keyRes.ok || !keyData.publicKey) throw new Error(keyData.error || "Push isn't set up yet")
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
+      })
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      })
+      setPushSubscribed(true)
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Failed to enable notifications")
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const disableNotifications = async () => {
+    setPushBusy(true)
+    setPushError(null)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch("/api/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setPushSubscribed(false)
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Failed to disable notifications")
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   useEffect(() => {
     fetch("/api/userinfo").then(r => r.json()).then(setUser).catch(() => {})
@@ -66,8 +145,8 @@ export default function SettingsPage() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || "Failed to delete account")
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete account")
       setDeleting(false)
     }
   }
@@ -146,7 +225,7 @@ export default function SettingsPage() {
             {/* Invite Link */}
             <div>
               <h3 className="text-sm font-medium text-white">Your Personal Invite Link</h3>
-              <p className="mt-0.5 text-xs text-gray">Share this link to invite others to join. You'll be credited as their sponsor.</p>
+              <p className="mt-0.5 text-xs text-gray">Share this link to invite others to join. You&apos;ll be credited as their sponsor.</p>
               <div className="mt-3 flex items-center gap-2">
                 <input
                   type="text"
@@ -213,6 +292,55 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section className="rounded-lg border border-gray-dark bg-black-light">
+          <div className="border-b border-gray-dark px-5 py-3">
+            <h2 className="flex items-center gap-2 font-display text-sm font-semibold tracking-wide text-gold">
+              <Bell className="h-4 w-4" />
+              Notifications
+            </h2>
+          </div>
+          <div className="p-5">
+            {!pushSupported ? (
+              <p className="text-xs text-gray">
+                This browser doesn&apos;t support push notifications.
+              </p>
+            ) : !pushStandalone ? (
+              <p className="text-xs text-gray">
+                On iPhone/iPad, notifications only work once Sanctum is added to your home
+                screen: tap Share → <span className="text-gold">Add to Home Screen</span>, then
+                open it from there and come back to this page.
+              </p>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-white">
+                    {pushSubscribed ? "Notifications are on" : "Get notified on this device"}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-gray">
+                    New messages and mentions in your guilds. Per-device — enable on each phone
+                    or computer you want notified on.
+                  </p>
+                  {pushError && <p className="mt-1 text-xs text-danger">{pushError}</p>}
+                </div>
+                <button
+                  onClick={pushSubscribed ? disableNotifications : enableNotifications}
+                  disabled={pushBusy}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border px-4 py-2 font-display text-xs font-medium tracking-wide transition-colors disabled:opacity-50",
+                    pushSubscribed
+                      ? "border-gray-dark text-gray hover:text-white"
+                      : "border-gold/30 bg-gold/10 text-gold hover:bg-gold/20",
+                  )}
+                >
+                  {pushSubscribed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+                  {pushBusy ? "…" : pushSubscribed ? "Turn off" : "Turn on"}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

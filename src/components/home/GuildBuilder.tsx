@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
 
-import { ChambersToggle } from "@/components/shared"
+import { ChambersToggle, UserPicker } from "@/components/shared"
 import { ALL_CHAMBER_IDS } from "@/lib/chambers"
 import { sanitizeSvg } from "@/lib/svg-sanitize"
 import type { ChamberId } from "@/types/guild"
@@ -35,6 +35,7 @@ export function GuildBuilder() {
   const [color, setColor] = useState(COLOR_PRESETS[0])
   const [admission, setAdmission] = useState<"open" | "closed" | "mandatory">("open")
   const [chambers, setChambers] = useState<Set<ChamberId>>(new Set(ALL_CHAMBER_IDS))
+  const [leadershipCircle, setLeadershipCircle] = useState<string[]>([])
 
   const [emblemMode, setEmblemMode] = useState<EmblemMode>("glyph")
   const [glyph, setGlyph] = useState<string>(DEFAULT_GLYPH)
@@ -107,6 +108,7 @@ export function GuildBuilder() {
             color,
             admission,
             chambers: Array.from(chambers),
+            leadershipCircle,
           }),
         })
         if (!res.ok) {
@@ -300,6 +302,23 @@ export function GuildBuilder() {
             </label>
           ))}
         </div>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center gap-2">
+          <label className="block text-xs uppercase tracking-widest text-faint">Leadership Circle</label>
+          <span className="text-[0.65rem] uppercase tracking-widest text-faint/70">Optional</span>
+        </div>
+        <UserPicker
+          picked={leadershipCircle}
+          onAdd={u => setLeadershipCircle(prev => [...prev, u])}
+          onRemove={u => setLeadershipCircle(prev => prev.filter(x => x !== u))}
+          placeholder="Name other Masons for this circle…"
+        />
+        <p className="mt-2 text-xs text-faint">
+          Situational — for whatever this guild is organising. Not required to seed it; add or
+          remove anytime from Guild Settings.
+        </p>
       </div>
 
       <div className="flex items-center gap-3 pt-2">

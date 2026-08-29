@@ -13,6 +13,7 @@ interface Props {
   scroll: Scroll
   submissions: ScrollSubmission[]
   isSeeder: boolean
+  canReviewSubmissions: boolean
   currentUser: string
 }
 
@@ -25,7 +26,7 @@ const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: "date", label: "Date" },
 ]
 
-export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Props) {
+export function ScrollDetail({ scroll, submissions, isSeeder, canReviewSubmissions, currentUser }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +35,7 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [copied, setCopied] = useState(false)
   const [editingContent, setEditingContent] = useState(false)
+  const [showSubmissions, setShowSubmissions] = useState(false)
 
   // Seeder-only question builder state
   const [newQ, setNewQ] = useState("")
@@ -193,9 +195,6 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
               <Pencil className="h-3.5 w-3.5" />
               {editingContent ? "Close editor" : "Design page content"}
             </button>
-            <span className="font-mono text-[10px] text-faint">
-              {submissions.length} submission{submissions.length === 1 ? "" : "s"}
-            </span>
           </div>
 
           {editingContent && (
@@ -235,6 +234,52 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
               <button type="button" onClick={copyPublicUrl} className="shrink-0 text-gray hover:text-guild">
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {canReviewSubmissions && (
+        <div className="rounded-lg border border-gray-dark p-4">
+          <button
+            type="button"
+            onClick={() => setShowSubmissions(v => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <span className="font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
+              {submissions.length} submission{submissions.length === 1 ? "" : "s"}
+            </span>
+            <span className="text-xs text-guild">{showSubmissions ? "Hide" : "View"}</span>
+          </button>
+
+          {showSubmissions && (
+            <div className="mt-4 flex flex-col gap-3">
+              {submissions.length === 0 ? (
+                <p className="text-sm italic text-faint">No submissions yet.</p>
+              ) : (
+                submissions.map(s => (
+                  <div key={s.id} className="rounded-lg border border-gray-dark bg-black-deep/40 p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs text-faint">
+                      <span className="text-white">{s.submittedBy ?? s.submittedEmail ?? "Anonymous"}</span>
+                      <span>{new Date(s.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                    </div>
+                    <dl className="flex flex-col gap-2">
+                      {scroll.questions.map(q => {
+                        const answer = s.answers[q.id]
+                        if (answer === undefined || answer === null || answer === "") return null
+                        return (
+                          <div key={q.id}>
+                            <dt className="text-xs text-faint">{q.text}</dt>
+                            <dd className="text-sm text-gray-light">
+                              {Array.isArray(answer) ? answer.join(", ") : String(answer)}
+                            </dd>
+                          </div>
+                        )
+                      })}
+                    </dl>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

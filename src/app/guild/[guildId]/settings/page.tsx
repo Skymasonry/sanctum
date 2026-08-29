@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ChamberSettings } from "@/components/guild-settings/ChamberSettings"
 import { DangerZone } from "@/components/guild-settings/DangerZone"
 import { InfoSettings } from "@/components/guild-settings/InfoSettings"
+import { LeadershipCircleSettings } from "@/components/guild-settings/LeadershipCircleSettings"
 import { StewardsSettings } from "@/components/guild-settings/StewardsSettings"
 import { ChamberHeader, ChamberScroll } from "@/components/shared"
 import { getUser } from "@/lib/auth"
@@ -56,6 +57,15 @@ export default async function GuildSettingsPage({ params }: GuildSettingsPagePro
           and editable by any current steward.
         </p>
         <StewardsSettings guildId={guildId} stewards={guild.stewardUids} members={guild.members} />
+      </section>
+
+      <section className="mt-5 glass-light rounded-[var(--card-radius)] p-5">
+        <h2 className="mb-1 font-display text-lg tracking-wide text-white">Leadership Circle</h2>
+        <p className="mb-4 text-sm text-gray">
+          Optional and situational — named by the seeder or a steward for whatever this guild
+          is organising. Can review scroll submissions; can&apos;t edit the guild itself.
+        </p>
+        <LeadershipCircleSettings guildId={guildId} members={guild.leadershipCircle} />
       </section>
 
       <section className="mt-5 glass-light rounded-[var(--card-radius)] p-5">

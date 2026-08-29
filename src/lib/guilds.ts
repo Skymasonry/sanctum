@@ -35,7 +35,7 @@ interface GuildRow {
   chambers: string[] | null
 }
 
-function rowToGuild(row: GuildRow, members: string[], pending: string[], applications: GuildApplication[], agreements: Array<{ id: number; text: string }>, stewards: string[]): Guild {
+function rowToGuild(row: GuildRow, members: string[], pending: string[], applications: GuildApplication[], agreements: Array<{ id: number; text: string }>, stewards: string[], leadershipCircle: string[]): Guild {
   return {
     id: row.id,
     name: row.name,
@@ -45,6 +45,7 @@ function rowToGuild(row: GuildRow, members: string[], pending: string[], applica
     admission: row.admission,
     seederUid: row.seeder_uid,
     stewardUids: stewards,
+    leadershipCircle,
     members,
     pending,
     applications,
@@ -80,7 +81,7 @@ async function loadGuilds(where: string, params: unknown[] = []): Promise<Guild[
   if (guilds.rowCount === 0) return []
 
   const ids = guilds.rows.map(g => g.id)
-  const [members, apps, forms, stewards] = await Promise.all([
+  const [members, apps, forms, stewards, leadership] = await Promise.all([
     db.query<{ guild_id: string; user_id: string }>(
       `SELECT guild_id, user_id FROM guild_members WHERE guild_id = ANY($1::text[])`,
       [ids],
@@ -97,6 +98,10 @@ async function loadGuilds(where: string, params: unknown[] = []): Promise<Guild[
     ),
     db.query<{ guild_id: string; user_id: string }>(
       `SELECT guild_id, user_id FROM guild_stewards WHERE guild_id = ANY($1::text[])`,
+      [ids],
+    ),
+    db.query<{ guild_id: string; user_id: string }>(
+      `SELECT guild_id, user_id FROM guild_leadership_circle WHERE guild_id = ANY($1::text[])`,
       [ids],
     ),
   ])
@@ -139,6 +144,13 @@ async function loadGuilds(where: string, params: unknown[] = []): Promise<Guild[
     stewardsByGuild.set(s.guild_id, list)
   }
 
+  const leadershipByGuild = new Map<string, string[]>()
+  for (const l of leadership.rows) {
+    const list = leadershipByGuild.get(l.guild_id) ?? []
+    list.push(l.user_id)
+    leadershipByGuild.set(l.guild_id, list)
+  }
+
   return guilds.rows.map(row =>
     rowToGuild(
       row,
@@ -147,6 +159,7 @@ async function loadGuilds(where: string, params: unknown[] = []): Promise<Guild[
       appsByGuild.get(row.id) ?? [],
       agreementsByGuild.get(row.id) ?? [],
       stewardsByGuild.get(row.id) ?? [],
+      leadershipByGuild.get(row.id) ?? [],
     ),
   )
 }
@@ -175,7 +188,8 @@ export async function getUserGuilds(): Promise<Guild[]> {
     `WHERE id IN (
        SELECT guild_id FROM guild_members WHERE lower(user_id) = lower($1)
      ) OR admission = 'mandatory'
-       OR id IN (SELECT guild_id FROM guild_stewards WHERE lower(user_id) = lower($1))`,
+       OR id IN (SELECT guild_id FROM guild_stewards WHERE lower(user_id) = lower($1))
+       OR id IN (SELECT guild_id FROM guild_leadership_circle WHERE lower(user_id) = lower($1))`,
     [username],
   )
 }
