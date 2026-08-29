@@ -1,6 +1,6 @@
 import { Compass } from "lucide-react"
 
-import { ChamberHeader } from "@/components/shared"
+import { ChamberHeader, ChamberScroll } from "@/components/shared"
 import { DiscoverSection } from "@/components/home/DiscoverSection"
 import { getUser } from "@/lib/auth"
 import { getAllGuildsUnfiltered } from "@/lib/guilds"
@@ -30,21 +30,19 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
 
   return (
     <div className="glass flex h-full flex-col overflow-hidden" style={{ borderRadius: 'var(--panel-radius)' }}>
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <ChamberScroll>
         <ChamberHeader
           backHref="/"
           icon={<Compass className="h-10 w-10 text-gold" />}
           title="Discover"
           subtitle="Guilds you haven't joined"
         />
-        <div className="flex-1">
-          <DiscoverSection
-            guilds={nonMemberGuilds}
-            username={username}
-            search={q || ""}
-          />
-        </div>
-      </div>
+        <DiscoverSection
+          guilds={nonMemberGuilds}
+          username={username}
+          search={q || ""}
+        />
+      </ChamberScroll>
     </div>
   )
 }
