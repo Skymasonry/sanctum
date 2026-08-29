@@ -21,15 +21,52 @@ export interface Scroll {
   createdAt: string
   updatedAt: string
   published: boolean
+  headerImageUrl: string | null
+  autoJoinGuild: boolean
+  publicAccess: boolean
   questions: ScrollQuestion[]
 }
 
 export interface ScrollSubmission {
   id: string
   scrollId: string
-  submittedBy: string
+  submittedBy: string | null
+  submittedEmail: string | null
   submittedAt: string
   answers: Record<string, unknown>
+}
+
+interface ScrollMetaRow {
+  id: string
+  guild_id: string
+  title: string
+  description: string
+  created_by: string
+  created_at: Date
+  updated_at: Date
+  published: boolean
+  header_image_url: string | null
+  auto_join_guild: boolean
+  public_access: boolean
+}
+
+const SCROLL_COLUMNS = `id, guild_id, title, description, created_by, created_at, updated_at,
+       published, header_image_url, auto_join_guild, public_access`
+
+function rowToScrollMeta(m: ScrollMetaRow) {
+  return {
+    id: m.id,
+    guildId: m.guild_id,
+    title: m.title,
+    description: m.description,
+    createdBy: m.created_by,
+    createdAt: m.created_at.toISOString(),
+    updatedAt: m.updated_at.toISOString(),
+    published: m.published,
+    headerImageUrl: m.header_image_url,
+    autoJoinGuild: m.auto_join_guild,
+    publicAccess: m.public_access,
+  }
 }
 
 /**
@@ -39,27 +76,15 @@ export interface ScrollSubmission {
 export async function listScrollsForGuild(guildId: string): Promise<Array<
   Omit<Scroll, "questions"> & { questionCount: number; submissionCount: number }
 >> {
-  const res = await db.query<{
-    id: string; guild_id: string; title: string; description: string;
-    created_by: string; created_at: Date; updated_at: Date; published: boolean;
-    question_count: number; submission_count: number
-  }>(
-    `SELECT s.id, s.guild_id, s.title, s.description, s.created_by,
-            s.created_at, s.updated_at, s.published,
+  const res = await db.query<ScrollMetaRow & { question_count: number; submission_count: number }>(
+    `SELECT s.*,
             (SELECT COUNT(*) FROM scroll_questions q WHERE q.scroll_id = s.id) AS question_count,
             (SELECT COUNT(*) FROM scroll_submissions sub WHERE sub.scroll_id = s.id) AS submission_count
      FROM scrolls s WHERE s.guild_id = $1 ORDER BY s.updated_at DESC`,
     [guildId],
   )
   return res.rows.map(r => ({
-    id: r.id,
-    guildId: r.guild_id,
-    title: r.title,
-    description: r.description,
-    createdBy: r.created_by,
-    createdAt: r.created_at.toISOString(),
-    updatedAt: r.updated_at.toISOString(),
-    published: r.published,
+    ...rowToScrollMeta(r),
     questionCount: Number(r.question_count),
     submissionCount: Number(r.submission_count),
   }))
@@ -67,14 +92,7 @@ export async function listScrollsForGuild(guildId: string): Promise<Array<
 
 export async function getScroll(scrollId: string): Promise<Scroll | null> {
   const [meta, questions] = await Promise.all([
-    db.query<{
-      id: string; guild_id: string; title: string; description: string;
-      created_by: string; created_at: Date; updated_at: Date; published: boolean
-    }>(
-      `SELECT id, guild_id, title, description, created_by, created_at, updated_at, published
-       FROM scrolls WHERE id = $1`,
-      [scrollId],
-    ),
+    db.query<ScrollMetaRow>(`SELECT ${SCROLL_COLUMNS} FROM scrolls WHERE id = $1`, [scrollId]),
     db.query<{
       id: string; scroll_id: string; text: string; type: QuestionType;
       required: boolean; position: number; options: unknown
@@ -85,16 +103,8 @@ export async function getScroll(scrollId: string): Promise<Scroll | null> {
     ),
   ])
   if (meta.rowCount === 0) return null
-  const m = meta.rows[0]
   return {
-    id: m.id,
-    guildId: m.guild_id,
-    title: m.title,
-    description: m.description,
-    createdBy: m.created_by,
-    createdAt: m.created_at.toISOString(),
-    updatedAt: m.updated_at.toISOString(),
-    published: m.published,
+    ...rowToScrollMeta(meta.rows[0]),
     questions: questions.rows.map(q => ({
       id: q.id,
       scrollId: q.scroll_id,
@@ -124,7 +134,14 @@ export async function createScroll(
 
 export async function updateScroll(
   scrollId: string,
-  patch: { title?: string; description?: string; published?: boolean },
+  patch: {
+    title?: string
+    description?: string
+    published?: boolean
+    headerImageUrl?: string | null
+    autoJoinGuild?: boolean
+    publicAccess?: boolean
+  },
 ): Promise<boolean> {
   const sets: string[] = []
   const params: unknown[] = []
@@ -132,6 +149,9 @@ export async function updateScroll(
   if (patch.title !== undefined) { sets.push(`title = $${n++}`); params.push(patch.title) }
   if (patch.description !== undefined) { sets.push(`description = $${n++}`); params.push(patch.description) }
   if (patch.published !== undefined) { sets.push(`published = $${n++}`); params.push(patch.published) }
+  if (patch.headerImageUrl !== undefined) { sets.push(`header_image_url = $${n++}`); params.push(patch.headerImageUrl) }
+  if (patch.autoJoinGuild !== undefined) { sets.push(`auto_join_guild = $${n++}`); params.push(patch.autoJoinGuild) }
+  if (patch.publicAccess !== undefined) { sets.push(`public_access = $${n++}`); params.push(patch.publicAccess) }
   if (sets.length === 0) return true
   sets.push(`updated_at = NOW()`)
   params.push(scrollId)
@@ -197,20 +217,27 @@ export async function deleteQuestion(questionId: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0
 }
 
+/**
+ * Record a submission. `submittedBy` is an Authentik username for
+ * normal in-app fills; it's null for a public (unauthenticated)
+ * submission, which is identified by `submittedEmail` instead.
+ */
 export async function submitScroll(
   scrollId: string,
-  submittedBy: string,
+  submittedBy: string | null,
+  submittedEmail: string | null,
   answers: Record<string, unknown>,
 ): Promise<ScrollSubmission> {
   const res = await db.query<{ id: string; submitted_at: Date }>(
-    `INSERT INTO scroll_submissions (scroll_id, submitted_by, answers)
-     VALUES ($1, $2, $3::jsonb) RETURNING id, submitted_at`,
-    [scrollId, submittedBy, JSON.stringify(answers)],
+    `INSERT INTO scroll_submissions (scroll_id, submitted_by, submitted_email, answers)
+     VALUES ($1, $2, $3, $4::jsonb) RETURNING id, submitted_at`,
+    [scrollId, submittedBy, submittedEmail, JSON.stringify(answers)],
   )
   return {
     id: res.rows[0].id,
     scrollId,
     submittedBy,
+    submittedEmail,
     submittedAt: res.rows[0].submitted_at.toISOString(),
     answers,
   }
@@ -218,9 +245,10 @@ export async function submitScroll(
 
 export async function listSubmissions(scrollId: string): Promise<ScrollSubmission[]> {
   const res = await db.query<{
-    id: string; scroll_id: string; submitted_by: string; submitted_at: Date; answers: unknown
+    id: string; scroll_id: string; submitted_by: string | null; submitted_email: string | null
+    submitted_at: Date; answers: unknown
   }>(
-    `SELECT id, scroll_id, submitted_by, submitted_at, answers
+    `SELECT id, scroll_id, submitted_by, submitted_email, submitted_at, answers
      FROM scroll_submissions WHERE scroll_id = $1 ORDER BY submitted_at DESC`,
     [scrollId],
   )
@@ -228,6 +256,7 @@ export async function listSubmissions(scrollId: string): Promise<ScrollSubmissio
     id: r.id,
     scrollId: r.scroll_id,
     submittedBy: r.submitted_by,
+    submittedEmail: r.submitted_email,
     submittedAt: r.submitted_at.toISOString(),
     answers: (typeof r.answers === "object" && r.answers !== null ? r.answers : {}) as Record<string, unknown>,
   }))
