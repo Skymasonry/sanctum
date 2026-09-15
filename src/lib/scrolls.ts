@@ -135,7 +135,7 @@ export async function getScroll(scrollId: string): Promise<Scroll | null> {
 export async function getScrollByGuild(guildId: string): Promise<Scroll | null> {
   const meta = await db.query<ScrollMetaRow>(
     `SELECT ${SCROLL_COLUMNS} FROM scrolls
-     WHERE guild_id = $1 AND published = true AND auto_join_guild = true
+     WHERE guild_id = $1 AND published = true
      ORDER BY created_at ASC LIMIT 1`,
     [guildId],
   )
