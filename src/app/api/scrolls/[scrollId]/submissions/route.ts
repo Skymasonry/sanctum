@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from "next/server"
 
 import { addMember } from "@/lib/guild-writes"
 import { getGuild } from "@/lib/guilds"
+import { getFSTSJoinGuildIds } from "@/lib/pending-joins"
 import { getScroll, listSubmissions, submitScroll } from "@/lib/scrolls"
 import { canReviewSubmissions } from "@/types/guild"
 
@@ -56,11 +57,14 @@ export async function POST(
   // Auto-join is best-effort: a Nextcloud hiccup on the sync side
   // shouldn't fail a submission that already saved successfully.
   if (scroll.autoJoinGuild) {
-    try {
-      await addMember(scroll.guildId, username, auth)
-    } catch (err) {
-      console.error(`auto-join ${scroll.guildId} for ${username} after scroll ${scrollId} failed:`, err)
-    }
+    const guildIds = await getFSTSJoinGuildIds()
+    await Promise.all(
+      guildIds.map(gid =>
+        addMember(gid, username, auth).catch(err =>
+          console.error(`auto-join ${gid} for ${username} after scroll ${scrollId} failed:`, err),
+        ),
+      ),
+    )
   }
 
   return NextResponse.json({ submission })
