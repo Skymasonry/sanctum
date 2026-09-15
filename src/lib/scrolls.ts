@@ -128,6 +128,41 @@ export async function getScroll(scrollId: string): Promise<Scroll | null> {
   }
 }
 
+/**
+ * Find the first published auto-join scroll for a guild. Used by the
+ * /join page to locate the FSTS form without needing its UUID.
+ */
+export async function getScrollByGuild(guildId: string): Promise<Scroll | null> {
+  const meta = await db.query<ScrollMetaRow>(
+    `SELECT ${SCROLL_COLUMNS} FROM scrolls
+     WHERE guild_id = $1 AND published = true AND auto_join_guild = true
+     ORDER BY created_at ASC LIMIT 1`,
+    [guildId],
+  )
+  if (meta.rowCount === 0) return null
+  const scrollId = meta.rows[0].id
+  const questions = await db.query<{
+    id: string; scroll_id: string; text: string; type: QuestionType;
+    required: boolean; position: number; options: unknown
+  }>(
+    `SELECT id, scroll_id, text, type, required, "position", options
+     FROM scroll_questions WHERE scroll_id = $1 ORDER BY "position"`,
+    [scrollId],
+  )
+  return {
+    ...rowToScrollMeta(meta.rows[0]),
+    questions: questions.rows.map(q => ({
+      id: q.id,
+      scrollId: q.scroll_id,
+      text: q.text,
+      type: q.type,
+      required: q.required,
+      position: q.position,
+      options: Array.isArray(q.options) ? q.options as string[] : [],
+    })),
+  }
+}
+
 export async function createScroll(
   guildId: string,
   createdBy: string,

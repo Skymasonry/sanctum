@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server"
 
 import { getScroll, submitScroll } from "@/lib/scrolls"
+import { getFSTSJoinGuildIds, storePendingJoins } from "@/lib/pending-joins"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -56,5 +57,16 @@ export async function POST(
   }
 
   const submission = await submitScroll(scrollId, null, body.email, body.answers)
+
+  // Store pending guild memberships for this email so they're applied
+  // automatically the first time they log in, regardless of how/when
+  // their account gets created.
+  if (scroll.autoJoinGuild) {
+    const guildIds = await getFSTSJoinGuildIds()
+    await storePendingJoins(body.email, guildIds).catch(err =>
+      console.error("storePendingJoins failed:", err),
+    )
+  }
+
   return NextResponse.json({ submission })
 }
