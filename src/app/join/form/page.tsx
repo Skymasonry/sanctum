@@ -28,7 +28,7 @@ export default async function JoinFormPage() {
         <h1 className="mb-6 font-display text-2xl font-semibold tracking-wide text-white">
           {scroll.title}
         </h1>
-        <JoinScrollForm scroll={scroll} currentUser={user.username} />
+        <JoinScrollForm scroll={{ ...scroll, contentBlocks: [], headerImageUrl: null }} currentUser={user.username} />
       </ChamberScroll>
     </div>
   )

@@ -22,7 +22,7 @@ export default async function JoinApplyPage() {
         <h1 className="mb-6 font-display text-2xl font-semibold tracking-wide text-white">
           {scroll.title}
         </h1>
-        <PublicScrollForm scroll={scroll} />
+        <PublicScrollForm scroll={{ ...scroll, contentBlocks: [], headerImageUrl: null }} />
       </ChamberScroll>
     </div>
   )
