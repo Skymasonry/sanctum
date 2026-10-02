@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation"
+import Link from "next/link"
 
 import { ChamberScroll } from "@/components/shared"
 import { JoinScrollForm } from "@/components/scrolls/JoinScrollForm"
@@ -25,9 +26,14 @@ export default async function JoinFormPage() {
   return (
     <div className="glass flex h-full flex-col overflow-hidden" style={{ borderRadius: "var(--panel-radius)" }}>
       <ChamberScroll maxWidth="max-w-3xl">
-        <h1 className="mb-6 font-display text-2xl font-semibold tracking-wide text-white">
-          {scroll.title}
-        </h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="font-display text-2xl font-semibold tracking-wide text-white">
+            {scroll.title}
+          </h1>
+          <Link href="/join" className="text-xs text-faint hover:text-guild transition-colors">
+            ← Back to invitation letter
+          </Link>
+        </div>
         <JoinScrollForm scroll={{ ...scroll, contentBlocks: [], headerImageUrl: null }} currentUser={user.username} />
       </ChamberScroll>
     </div>
