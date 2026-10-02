@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Upload, Copy, Check, Pencil } from "lucide-react"
 
-import type { Scroll, ScrollQuestion, ScrollSubmission, QuestionType } from "@/lib/scrolls"
+import type { Scroll, ScrollSubmission, QuestionType } from "@/lib/scrolls"
+import { ContentBlocksEditor } from "./ContentBlocksEditor"
+import { ContentBlocksView } from "./ContentBlocksView"
+import { QuestionInput } from "./QuestionInput"
 
 interface Props {
   scroll: Scroll
   submissions: ScrollSubmission[]
   isSeeder: boolean
+  canReviewSubmissions: boolean
   currentUser: string
 }
 
@@ -22,12 +26,16 @@ const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: "date", label: "Date" },
 ]
 
-export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Props) {
+export function ScrollDetail({ scroll, submissions, isSeeder, canReviewSubmissions, currentUser }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [submitOK, setSubmitOK] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [copied, setCopied] = useState(false)
+  const [editingContent, setEditingContent] = useState(false)
+  const [showSubmissions, setShowSubmissions] = useState(false)
 
   // Seeder-only question builder state
   const [newQ, setNewQ] = useState("")
@@ -70,14 +78,41 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
     })
   }
 
-  const togglePublished = () => {
+  const patchScroll = (patch: Record<string, unknown>) => {
     start(async () => {
       await fetch(`/api/scrolls/${scroll.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ published: !scroll.published }),
+        body: JSON.stringify(patch),
       })
       router.refresh()
+    })
+  }
+
+  const uploadHeaderImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setError(null)
+    start(async () => {
+      try {
+        const fd = new FormData()
+        fd.append("file", file)
+        const res = await fetch(`/api/scrolls/${scroll.id}/header-image`, { method: "POST", body: fd })
+        if (!res.ok) {
+          const err = (await res.json().catch(() => null)) as { error?: string } | null
+          throw new Error(err?.error || `HTTP ${res.status}`)
+        }
+        const data = (await res.json()) as { url: string }
+        await fetch(`/api/scrolls/${scroll.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ headerImageUrl: data.url }),
+        })
+        router.refresh()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to upload image")
+      }
     })
   }
 
@@ -101,25 +136,152 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
   }
 
   const alreadySubmitted = submissions.some(s => s.submittedBy === currentUser)
+  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/public/scrolls/${scroll.id}` : ""
+
+  const copyPublicUrl = () => {
+    navigator.clipboard.writeText(publicUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6">
+      {scroll.headerImageUrl && (
+        <div className="overflow-hidden rounded-lg border border-gray-dark">
+          {/* eslint-disable-next-line @next/next/no-img-element -- external S3 URL, no next/image loader configured for it */}
+          <img src={scroll.headerImageUrl} alt="" className="h-72 w-full object-cover" />
+        </div>
+      )}
+
+      {scroll.contentBlocks.length > 0 ? (
+        <ContentBlocksView blocks={scroll.contentBlocks} />
+      ) : (
+        scroll.description && (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
+            {scroll.description}
+          </p>
+        )
+      )}
+
       {isSeeder && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-dark p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => patchScroll({ published: !scroll.published })}
+              className={`rounded-lg border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition ${
+                scroll.published
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-gray-dark text-gray hover:border-gold/40 hover:text-gold"
+              }`}
+            >
+              {scroll.published ? "Published" : "Publish"}
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-dark px-3 py-1.5 text-xs text-gray-light transition hover:border-guild/50 hover:bg-guild/10"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {scroll.headerImageUrl ? "Replace header image" : "Add header image"}
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadHeaderImage} className="hidden" />
+            <button
+              type="button"
+              onClick={() => setEditingContent(v => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-dark px-3 py-1.5 text-xs text-gray-light transition hover:border-guild/50 hover:bg-guild/10"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {editingContent ? "Close editor" : "Design page content"}
+            </button>
+          </div>
+
+          {editingContent && (
+            <ContentBlocksEditor
+              scrollId={scroll.id}
+              initialBlocks={scroll.contentBlocks}
+              onSaved={() => {
+                setEditingContent(false)
+                router.refresh()
+              }}
+            />
+          )}
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-light">
+            <input
+              type="checkbox"
+              checked={scroll.autoJoinGuild}
+              onChange={e => patchScroll({ autoJoinGuild: e.target.checked })}
+              className="accent-guild"
+            />
+            Submitting instantly joins this guild
+          </label>
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-light">
+            <input
+              type="checkbox"
+              checked={scroll.publicAccess}
+              onChange={e => patchScroll({ publicAccess: e.target.checked })}
+              className="accent-guild"
+            />
+            Anyone with the link can fill this out without a Sanctum account
+          </label>
+
+          {scroll.publicAccess && (
+            <div className="flex items-center gap-2 rounded-lg border border-gray-dark bg-black-deep px-3 py-2">
+              <code className="min-w-0 flex-1 truncate text-xs text-faint">{publicUrl}</code>
+              <button type="button" onClick={copyPublicUrl} className="shrink-0 text-gray hover:text-guild">
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {canReviewSubmissions && (
+        <div className="rounded-lg border border-gray-dark p-4">
           <button
             type="button"
-            onClick={togglePublished}
-            className={`rounded-lg border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] uppercase transition ${
-              scroll.published
-                ? "border-success/40 bg-success/10 text-success"
-                : "border-gray-dark text-gray hover:border-gold/40 hover:text-gold"
-            }`}
+            onClick={() => setShowSubmissions(v => !v)}
+            className="flex w-full items-center justify-between text-left"
           >
-            {scroll.published ? "Published" : "Publish"}
+            <span className="font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
+              {submissions.length} submission{submissions.length === 1 ? "" : "s"}
+            </span>
+            <span className="text-xs text-guild">{showSubmissions ? "Hide" : "View"}</span>
           </button>
-          <span className="font-mono text-[10px] text-faint">
-            {submissions.length} submission{submissions.length === 1 ? "" : "s"}
-          </span>
+
+          {showSubmissions && (
+            <div className="mt-4 flex flex-col gap-3">
+              {submissions.length === 0 ? (
+                <p className="text-sm italic text-faint">No submissions yet.</p>
+              ) : (
+                submissions.map(s => (
+                  <div key={s.id} className="rounded-lg border border-gray-dark bg-black-deep/40 p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs text-faint">
+                      <span className="text-white">{s.submittedBy ?? s.submittedEmail ?? "Anonymous"}</span>
+                      <span>{new Date(s.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                    </div>
+                    <dl className="flex flex-col gap-2">
+                      {scroll.questions.map(q => {
+                        const answer = s.answers[q.id]
+                        if (answer === undefined || answer === null || answer === "") return null
+                        return (
+                          <div key={q.id}>
+                            <dt className="text-xs text-faint">{q.text}</dt>
+                            <dd className="text-sm text-gray-light">
+                              {Array.isArray(answer) ? answer.join(", ") : String(answer)}
+                            </dd>
+                          </div>
+                        )
+                      })}
+                    </dl>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -131,15 +293,31 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
       ) : (
         <div className="flex flex-col gap-3">
           {scroll.questions.map((q, i) => (
-            <QuestionRow
-              key={q.id}
-              question={q}
-              index={i}
-              answer={answers[q.id]}
-              onAnswer={v => setAnswers(a => ({ ...a, [q.id]: v }))}
-              onRemove={isSeeder ? () => removeQuestion(q.id) : undefined}
-              disabled={!scroll.published || alreadySubmitted}
-            />
+            <div key={q.id} className="rounded-lg border border-gray-dark bg-black-deep/30 p-3">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <label className="text-sm text-white">
+                  <span className="mr-2 text-faint">{i + 1}.</span>
+                  {q.text}
+                  {q.required && <span className="ml-1 text-danger">*</span>}
+                </label>
+                {isSeeder && (
+                  <button
+                    type="button"
+                    onClick={() => removeQuestion(q.id)}
+                    className="rounded p-1 text-gray transition hover:bg-black-light hover:text-danger"
+                    aria-label="Remove question"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <QuestionInput
+                question={q}
+                answer={answers[q.id]}
+                onAnswer={v => setAnswers(a => ({ ...a, [q.id]: v }))}
+                disabled={!scroll.published || alreadySubmitted}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -202,7 +380,8 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
         <div className="mt-2">
           {alreadySubmitted || submitOK ? (
             <p className="rounded-lg bg-success/10 px-4 py-3 text-sm text-success">
-              You&apos;ve submitted this scroll.
+              You&apos;ve submitted this scroll
+              {scroll.autoJoinGuild ? " — welcome to the guild." : "."}
             </p>
           ) : (
             <button
@@ -217,116 +396,6 @@ export function ScrollDetail({ scroll, submissions, isSeeder, currentUser }: Pro
           {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </div>
       )}
-    </div>
-  )
-}
-
-function QuestionRow({
-  question,
-  index,
-  answer,
-  onAnswer,
-  onRemove,
-  disabled,
-}: {
-  question: ScrollQuestion
-  index: number
-  answer: unknown
-  onAnswer: (v: unknown) => void
-  onRemove?: () => void
-  disabled: boolean
-}) {
-  const label = (
-    <div className="mb-2 flex items-start justify-between gap-2">
-      <label className="text-sm text-white">
-        <span className="mr-2 text-faint">{index + 1}.</span>
-        {question.text}
-        {question.required && <span className="ml-1 text-danger">*</span>}
-      </label>
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded p-1 text-gray transition hover:bg-black-light hover:text-danger"
-          aria-label="Remove question"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  )
-
-  return (
-    <div className="rounded-lg border border-gray-dark bg-black-deep/30 p-3">
-      {label}
-      {question.type === "short" && (
-        <input
-          type="text"
-          value={(answer as string) ?? ""}
-          onChange={e => onAnswer(e.target.value)}
-          disabled={disabled}
-          className="w-full rounded border border-gray-dark bg-black-deep px-2 py-1.5 text-sm text-white focus:border-guild focus:outline-none disabled:opacity-50"
-        />
-      )}
-      {question.type === "long" && (
-        <textarea
-          value={(answer as string) ?? ""}
-          onChange={e => onAnswer(e.target.value)}
-          disabled={disabled}
-          rows={4}
-          className="w-full resize-y rounded border border-gray-dark bg-black-deep px-2 py-1.5 text-sm text-white focus:border-guild focus:outline-none disabled:opacity-50"
-        />
-      )}
-      {question.type === "date" && (
-        <input
-          type="date"
-          value={(answer as string) ?? ""}
-          onChange={e => onAnswer(e.target.value)}
-          disabled={disabled}
-          className="rounded border border-gray-dark bg-black-deep px-2 py-1.5 text-sm text-white focus:border-guild focus:outline-none disabled:opacity-50"
-        />
-      )}
-      {question.type === "radio" && question.options.map(opt => (
-        <label key={opt} className="flex items-center gap-2 py-1 text-sm text-white">
-          <input
-            type="radio"
-            name={question.id}
-            value={opt}
-            checked={answer === opt}
-            onChange={() => onAnswer(opt)}
-            disabled={disabled}
-          />
-          {opt}
-        </label>
-      ))}
-      {question.type === "select" && (
-        <select
-          value={(answer as string) ?? ""}
-          onChange={e => onAnswer(e.target.value)}
-          disabled={disabled}
-          className="rounded border border-gray-dark bg-black-deep px-2 py-1.5 text-sm text-white focus:border-guild focus:outline-none disabled:opacity-50"
-        >
-          <option value="">—</option>
-          {question.options.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      )}
-      {question.type === "checkbox" && question.options.map(opt => {
-        const list = Array.isArray(answer) ? (answer as string[]) : []
-        return (
-          <label key={opt} className="flex items-center gap-2 py-1 text-sm text-white">
-            <input
-              type="checkbox"
-              checked={list.includes(opt)}
-              onChange={e => {
-                const next = e.target.checked ? [...list, opt] : list.filter(o => o !== opt)
-                onAnswer(next)
-              }}
-              disabled={disabled}
-            />
-            {opt}
-          </label>
-        )
-      })}
     </div>
   )
 }

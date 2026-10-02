@@ -1,9 +1,7 @@
-import http from "http"
-
 import { headers } from "next/headers"
 import { NextResponse, NextRequest } from "next/server"
 
-const NEXTCLOUD_URL = process.env.NEXTCLOUD_INTERNAL_URL || "http://nextcloud:80"
+import { provisionSpace, type SpaceType } from "@/lib/guild-writes"
 
 async function getAuthHeaders() {
   const h = await headers()
@@ -16,41 +14,15 @@ async function getAuthHeaders() {
   }
 }
 
-function ncPost(path: string, body: string, authHeaders: Record<string, string>): Promise<{ status: number; body: string }> {
-  return new Promise((resolve, reject) => {
-    const url = new URL(NEXTCLOUD_URL)
-    const bodyBuf = Buffer.from(body)
-    const req = http.request(
-      {
-        hostname: url.hostname,
-        port: Number(url.port) || 80,
-        path,
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "Content-Length": bodyBuf.length,
-          Host: "brothers.skymasons.xyz",
-          ...authHeaders,
-        },
-      },
-      res => {
-        let data = ""
-        res.on("data", c => (data += c))
-        res.on("end", () => resolve({ status: res.statusCode ?? 500, body: data }))
-      },
-    )
-    req.on("error", reject)
-    req.write(bodyBuf)
-    req.end()
-  })
-}
+const VALID_TYPES: SpaceType[] = ["chat", "calendar", "folder"]
 
 /**
  * Provision (or re-fetch) a chamber for a guild.
  *
- * Body: { type: "chat" | "calendar" | "folder", name?: string }
- * Only the seeder can create spaces (enforced by the backend).
+ * Body: { type: "chat" | "calendar" | "folder" }
+ * Only the seeder can create spaces (enforced by the backend). The
+ * resulting resource id is persisted onto the guild row by
+ * provisionSpace — this route no longer just proxies the raw response.
  */
 export async function POST(
   request: NextRequest,
@@ -60,17 +32,20 @@ export async function POST(
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { guildId } = await params
-  const body = await request.text()
+  const body = (await request.json().catch(() => ({}))) as { type?: string }
+  if (!body.type || !VALID_TYPES.includes(body.type as SpaceType)) {
+    return NextResponse.json({ error: "type must be chat, calendar, or folder" }, { status: 400 })
+  }
 
   try {
-    const res = await ncPost(
-      `/apps/skymasonsnav/api/orders/${guildId}/spaces`,
-      body,
-      auth,
-    )
-    let parsed: unknown = null
-    try { parsed = JSON.parse(res.body) } catch {}
-    return NextResponse.json(parsed ?? { error: "Empty response" }, { status: res.status })
+    const result = await provisionSpace(guildId, body.type as SpaceType, auth)
+    if (Object.keys(result).length === 0) {
+      return NextResponse.json(
+        { error: "Nextcloud didn't return a usable resource id — check server logs" },
+        { status: 502 },
+      )
+    }
+    return NextResponse.json(result)
   } catch (err) {
     console.error("provision-space failed:", err)
     return NextResponse.json({ error: "Failed to provision space" }, { status: 500 })

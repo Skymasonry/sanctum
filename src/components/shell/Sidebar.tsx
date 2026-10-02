@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, LayoutGroup } from "framer-motion"
-import { Compass, Plus } from "lucide-react"
+import { Compass, Plus, ExternalLink, MessageSquare, Scroll } from "lucide-react"
 import { GuildIcon } from "@/components/shared"
 import { cn } from "@/lib/utils"
 import { useThresholdSignals, type GuildSignal } from "@/lib/hooks/useThresholdSignals"
@@ -14,6 +14,7 @@ import { InviteButton } from "./InviteButton"
 
 const PINNED_GUILD = "The Brotherhood"
 const STORAGE_KEY = "guild-access-order"
+const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
 
 interface SidebarProps {
   guilds: Guild[]
@@ -40,12 +41,10 @@ export function Sidebar({ guilds }: SidebarProps) {
   const [accessOrder, setAccessOrder] = useState<string[]>([])
   const signals = useThresholdSignals()
 
-  // Load access order from localStorage on mount
   useEffect(() => {
     setAccessOrder(getAccessOrder())
   }, [])
 
-  // Record access when guild changes
   useEffect(() => {
     if (currentGuildId) {
       const guild = guilds.find((g) => g.id === currentGuildId)
@@ -57,10 +56,8 @@ export function Sidebar({ guilds }: SidebarProps) {
   }, [currentGuildId, guilds])
 
   const sortedGuilds = [...guilds].sort((a, b) => {
-    // Pin The Brotherhood to top
     if (a.name === PINNED_GUILD) return -1
     if (b.name === PINNED_GUILD) return 1
-    // Then sort by recent access
     const aIdx = accessOrder.indexOf(a.id)
     const bIdx = accessOrder.indexOf(b.id)
     if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx
@@ -70,26 +67,33 @@ export function Sidebar({ guilds }: SidebarProps) {
   })
 
   return (
-    <aside className="flex h-screen w-[72px] flex-col items-center border-r border-gray-dark bg-black-deep py-4">
-      {/* Logo */}
+    <aside className="glass rounded-[20px] flex h-full w-[68px] shrink-0 flex-col items-center py-4">
+      {/* Logo — Cinzel "S" monogram */}
       <Link
         href="/"
-        className="mb-6 flex h-12 w-12 items-center justify-center transition-opacity hover:opacity-80"
+        className="mb-5 flex h-10 w-10 items-center justify-center transition-opacity hover:opacity-80"
       >
-        <Image
-          src="/logo.jpg"
-          alt="Skymasons"
-          width={40}
-          height={40}
-          className="rounded-full"
-        />
+        <div
+          className="flex h-[38px] w-[38px] items-center justify-center rounded-full"
+          style={{
+            background: 'rgba(201,162,39,0.12)',
+            border: '1px solid rgba(201,162,39,0.2)',
+          }}
+        >
+          <span
+            className="font-display text-[15px] font-normal leading-none"
+            style={{ color: 'rgba(201,162,39,0.8)' }}
+          >
+            S
+          </span>
+        </div>
       </Link>
 
       {/* Divider */}
-      <div className="mb-4 h-px w-8 bg-gray-dark" />
+      <div className="mb-4 h-px w-8 bg-white/10" />
 
       {/* Guild Icons */}
-      <nav className="flex flex-1 flex-col items-center gap-2">
+      <nav className="scrollbar-none flex flex-1 flex-col items-center gap-1.5 overflow-y-auto">
         <LayoutGroup>
           {sortedGuilds.map((guild) => (
             <SidebarItem
@@ -100,38 +104,37 @@ export function Sidebar({ guilds }: SidebarProps) {
             />
           ))}
         </LayoutGroup>
-        <Link
-          href="/create-guild"
-          className={cn(
-            "mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-ember/15 text-ember/80 transition-all duration-150",
-            "hover:scale-110 hover:bg-ember/25 hover:text-ember",
-            pathname === "/create-guild" && "bg-ember/25 text-ember",
-          )}
-          title="Seed a new guild"
-          aria-label="Seed a new guild"
-        >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
-        </Link>
-        <Link
-          href="/discover"
-          className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15 text-gold/80 transition-all duration-150",
-            "hover:scale-110 hover:bg-gold/25 hover:text-gold",
-            pathname === "/discover" && "bg-gold/25 text-gold",
-          )}
-          title="Discover guilds"
-          aria-label="Discover guilds"
-        >
-          <Compass className="h-5 w-5" strokeWidth={2.5} />
-        </Link>
       </nav>
 
       {/* Bottom actions */}
       <div className="mt-4 flex flex-col items-center gap-2">
-        <div className="mb-2 h-px w-8 bg-gray-dark" />
-        <div className="group relative">
-          <InviteButton />
-        </div>
+        <div className="mb-1 h-px w-8 bg-white/10" />
+        <Link
+          href="/create-guild"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-[10px] text-ember/70 transition-all duration-150",
+            "hover:bg-white/08 hover:text-ember",
+            pathname === "/create-guild" && "bg-white/08 text-ember",
+          )}
+          title="Seed a new guild"
+          aria-label="Seed a new guild"
+        >
+          <Plus className="h-[14px] w-[14px]" strokeWidth={2.5} />
+        </Link>
+        <Link
+          href="/discover"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-[10px] text-gold/60 transition-all duration-150",
+            "hover:bg-white/08 hover:text-gold",
+            pathname === "/discover" && "bg-white/08 text-gold",
+          )}
+          title="Discover guilds"
+          aria-label="Discover guilds"
+        >
+          <Compass className="h-[14px] w-[14px]" strokeWidth={2.5} />
+        </Link>
+        <div className="mt-1 mb-1 h-px w-8 bg-white/10" />
+        <InviteButton />
       </div>
     </aside>
   )
@@ -145,80 +148,113 @@ interface SidebarItemProps {
 
 function SidebarItem({ guild, isActive, signal }: SidebarItemProps) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const [mounted, setMounted] = useState(false)
+  const itemRef = useRef<HTMLDivElement>(null)
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => { setMounted(true) }, [])
+
   function handleMouseEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
-    openTimer.current = setTimeout(() => setOpen(true), 400)
+    if (itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect()
+      setMenuPos({ top: rect.top + rect.height / 2, left: rect.right + 8 })
+    }
+    openTimer.current = setTimeout(() => setOpen(true), 350)
   }
 
   function handleMouseLeave() {
     if (openTimer.current) clearTimeout(openTimer.current)
-    closeTimer.current = setTimeout(() => setOpen(false), 100)
+    closeTimer.current = setTimeout(() => setOpen(false), 150)
   }
 
-  return (
-    <motion.div
-      layout
-      layoutId={guild.id}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="relative"
-      onMouseEnter={handleMouseEnter}
+  const submenu = mounted && open && createPortal(
+    <div
+      className="fixed z-[9999]"
+      style={{ top: menuPos.top, left: menuPos.left, transform: 'translateY(-50%)' }}
+      onMouseEnter={() => { if (closeTimer.current) clearTimeout(closeTimer.current) }}
       onMouseLeave={handleMouseLeave}
     >
-      <Link
-        href={`/guild/${guild.id}`}
-        className={cn(
-          "relative flex h-12 w-12 items-center justify-center rounded-xl text-2xl transition-all duration-150",
-          "hover:scale-110 hover:bg-black-light",
-          isActive && "bg-black-light"
-        )}
-        style={{
-          boxShadow: isActive ? `inset 0 0 0 2px ${guild.color}` : "none",
-        }}
-        title={guild.name}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="active-pip"
-            className="absolute -left-[5px] top-1/2 h-6 w-1.5 -translate-y-1/2 rounded-full"
-            style={{ backgroundColor: guild.color }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          />
-        )}
-        <GuildIcon icon={guild.icon} color={guild.color} className="h-8 w-8 object-contain" />
-
-        {signal?.isLive ? (
-          <span
-            aria-label="Live now"
-            className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
-            style={{ boxShadow: "0 0 6px #d4623a" }}
-          />
-        ) : signal?.hasUnread ? (
-          <span
-            aria-label="Unread"
-            className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold"
-          />
-        ) : null}
-      </Link>
-
-      {/* Hover name-only tooltip */}
-      <div
-        className={cn(
-          "pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-2 transition-all duration-150",
-          open ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0",
-        )}
-      >
-        <div className="rounded-md border border-gray-dark bg-black px-2.5 py-1.5 shadow-xl">
-          <div
-            className="whitespace-nowrap text-xs font-medium tracking-wider"
-            style={{ color: guild.color }}
-          >
+      <div className="glass w-44 overflow-hidden rounded-xl shadow-2xl">
+        <div className="px-3 pb-1 pt-2.5">
+          <p className="font-display text-xs font-semibold tracking-wider" style={{ color: guild.color }}>
             {guild.name}
-          </div>
+          </p>
+        </div>
+        <div className="p-1">
+          <a
+            href={CHAMBER_HREF(guild.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+            The Chamber
+          </a>
+          <Link
+            href={`/guild/${guild.id}/pulse`}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <MessageSquare className="h-3 w-3 shrink-0 opacity-60" />
+            The Chat
+          </Link>
+          <Link
+            href={`/guild/${guild.id}/rites`}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-gray-light transition-colors hover:bg-white/06 hover:text-white"
+          >
+            <Scroll className="h-3 w-3 shrink-0 opacity-60" />
+            Rites
+          </Link>
         </div>
       </div>
-    </motion.div>
+    </div>,
+    document.body
+  )
+
+  return (
+    <>
+      <motion.div
+        ref={itemRef}
+        layout
+        layoutId={guild.id}
+        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Link
+          href={`/guild/${guild.id}`}
+          className={cn(
+            "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
+            "hover:bg-white/08",
+            isActive && "hover:bg-transparent"
+          )}
+          style={{ background: isActive ? 'rgba(201,162,39,0.12)' : undefined }}
+          title={guild.name}
+        >
+          {isActive && (
+            <motion.div
+              layoutId="active-pip"
+              className="absolute -left-[5px] top-1/2 -translate-y-1/2 rounded-[2px]"
+              style={{ backgroundColor: guild.color, height: '18px', width: '3px' }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            />
+          )}
+          <GuildIcon icon={guild.icon} color={guild.color} className="h-7 w-7 object-contain" />
+          {signal?.isLive ? (
+            <span
+              aria-label="Live now"
+              className="absolute top-1 right-1 h-1.5 w-1.5 animate-beat rounded-full bg-ember"
+              style={{ boxShadow: "0 0 6px #d4623a" }}
+            />
+          ) : signal?.hasUnread ? (
+            <span aria-label="Unread" className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-gold" />
+          ) : null}
+        </Link>
+      </motion.div>
+      {submenu}
+    </>
   )
 }

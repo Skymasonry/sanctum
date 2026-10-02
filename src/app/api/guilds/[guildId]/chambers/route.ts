@@ -3,12 +3,12 @@ import { NextResponse, NextRequest } from "next/server"
 
 import { updateGuildChambers } from "@/lib/guild-writes"
 import { getGuild } from "@/lib/guilds"
-import type { ChamberId } from "@/types/guild"
+import { isGuildManager, type ChamberId } from "@/types/guild"
 
 /**
  * PATCH /api/guilds/{guildId}/chambers
  *   { chambers: ChamberId[] }
- * Seeder-only. Replaces the chambers list wholesale.
+ * Seeder or steward only. Replaces the chambers list wholesale.
  */
 export async function PATCH(
   request: NextRequest,
@@ -21,8 +21,8 @@ export async function PATCH(
   const { guildId } = await params
   const guild = await getGuild(guildId)
   if (!guild) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (caller.toLowerCase() !== guild.seederUid.toLowerCase()) {
-    return NextResponse.json({ error: "Seeder only" }, { status: 403 })
+  if (!isGuildManager(guild, caller)) {
+    return NextResponse.json({ error: "Seeder or steward only" }, { status: 403 })
   }
 
   const body = (await request.json().catch(() => ({}))) as { chambers?: ChamberId[] }

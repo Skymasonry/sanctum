@@ -2,6 +2,7 @@ import { Users, UserPlus } from "lucide-react"
 import { ChamberHeader, Card, CardTitle } from "@/components/shared"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
+import { isGuildManager } from "@/types/guild"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ApplicationsPanel } from "./applications-panel"
@@ -10,7 +11,7 @@ interface BrotherhoodPageProps {
   params: Promise<{ guildId: string }>
 }
 
-function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolean }) {
+function MemberCard({ username, isSeeder, isSteward }: { username: string; isSeeder: boolean; isSteward: boolean }) {
   return (
     <Link
       href={`/profile/${encodeURIComponent(username)}`}
@@ -27,8 +28,10 @@ function MemberCard({ username, isSeeder }: { username: string; isSeeder: boolea
             <CardTitle className={isSeeder ? "text-gold group-hover:text-gold" : undefined}>
               {username}
             </CardTitle>
-            {isSeeder && (
-              <p className="text-sm text-gold/70">Seeder</p>
+            {(isSeeder || isSteward) && (
+              <p className="text-sm text-gold/70">
+                {[isSeeder && "Seeder", isSteward && "Steward"].filter(Boolean).join(" · ")}
+              </p>
             )}
           </div>
         </div>
@@ -45,7 +48,7 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
     notFound()
   }
 
-  const isSeeder = user?.username === guild.seederUid
+  const canManage = isGuildManager(guild, user?.username)
   const applications = guild.applications ?? []
 
   const sortedMembers = [...guild.members].sort((a, b) => {
@@ -55,7 +58,7 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
   })
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<Users className="h-10 w-10 text-guild" />}
@@ -73,8 +76,8 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
         </Link>
       </div>
 
-      <div className="flex-1">
-        {isSeeder && applications.length > 0 && (
+      <div className="scrollbar-none flex-1 overflow-y-auto">
+        {canManage && applications.length > 0 && (
           <ApplicationsPanel guildId={guildId} applications={applications} />
         )}
 
@@ -84,6 +87,7 @@ export default async function BrotherhoodPage({ params }: BrotherhoodPageProps) 
               key={username}
               username={username}
               isSeeder={username === guild.seederUid}
+              isSteward={guild.stewardUids.some(s => s.toLowerCase() === username.toLowerCase())}
             />
           ))}
         </div>

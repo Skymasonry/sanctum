@@ -3,24 +3,36 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
+import { EthosFields } from "@/components/shared"
+
 interface InfoSettingsProps {
   guildId: string
   initialName: string
   initialDescription: string
+  initialEvolutionaryPurpose: string
+  initialPatternIntegrity: string
 }
 
 export function InfoSettings({
   guildId,
   initialName,
   initialDescription,
+  initialEvolutionaryPurpose,
+  initialPatternIntegrity,
 }: InfoSettingsProps) {
   const router = useRouter()
   const [name, setName] = useState(initialName)
   const [description, setDescription] = useState(initialDescription)
+  const [evolutionaryPurpose, setEvolutionaryPurpose] = useState(initialEvolutionaryPurpose)
+  const [patternIntegrity, setPatternIntegrity] = useState(initialPatternIntegrity)
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null)
 
-  const dirty = name.trim() !== initialName || description !== initialDescription
+  const dirty =
+    name.trim() !== initialName ||
+    description !== initialDescription ||
+    evolutionaryPurpose !== initialEvolutionaryPurpose ||
+    patternIntegrity !== initialPatternIntegrity
 
   const save = () => {
     setMsg(null)
@@ -29,7 +41,12 @@ export function InfoSettings({
         const res = await fetch(`/api/guilds/${guildId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim(), description }),
+          body: JSON.stringify({
+            name: name.trim(),
+            description,
+            evolutionaryPurpose: evolutionaryPurpose.trim(),
+            patternIntegrity: patternIntegrity.trim(),
+          }),
         })
         if (!res.ok) {
           const err = (await res.json().catch(() => null)) as { error?: string } | null
@@ -65,6 +82,20 @@ export function InfoSettings({
           className="w-full resize-y rounded-lg border border-gray-dark bg-black-deep px-3 py-2 text-sm text-white focus:border-guild focus:outline-none"
         />
       </div>
+
+      <div className="border-t border-gray-dark pt-4">
+        <p className="mb-3 text-xs text-faint">
+          Never set up during seeding? Add this guild&apos;s ethos anytime — it&apos;s shown on
+          its details card.
+        </p>
+        <EthosFields
+          evolutionaryPurpose={evolutionaryPurpose}
+          onEvolutionaryPurposeChange={setEvolutionaryPurpose}
+          patternIntegrity={patternIntegrity}
+          onPatternIntegrityChange={setPatternIntegrity}
+        />
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="button"
