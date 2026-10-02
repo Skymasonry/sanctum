@@ -12,7 +12,7 @@ export interface ScrollQuestion {
   options: string[]
 }
 
-export type ContentBlockType = "heading" | "body"
+export type ContentBlockType = "heading" | "body" | "agreement"
 
 export interface ContentBlock {
   id: string

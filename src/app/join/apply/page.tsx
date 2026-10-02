@@ -28,7 +28,7 @@ export default async function JoinApplyPage() {
             ← Back to invitation letter
           </Link>
         </div>
-        <PublicScrollForm scroll={{ ...scroll, contentBlocks: [], headerImageUrl: null }} />
+        <PublicScrollForm scroll={{ ...scroll, contentBlocks: scroll.contentBlocks.filter(b => b.type === "agreement"), headerImageUrl: null }} />
       </ChamberScroll>
     </div>
   )

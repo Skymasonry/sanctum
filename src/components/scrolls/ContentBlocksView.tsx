@@ -18,6 +18,12 @@ export function ContentBlocksView({ blocks }: ContentBlocksViewProps) {
           <h2 key={b.id} className="mt-2 font-display text-lg tracking-wide text-guild first:mt-0">
             {b.text}
           </h2>
+        ) : b.type === "agreement" ? (
+          <div key={b.id} className="rounded-lg border border-gray-dark bg-black-deep/40 px-4 py-4">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
+              {b.text}
+            </p>
+          </div>
         ) : (
           <p key={b.id} className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
             {b.text}

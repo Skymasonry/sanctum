@@ -68,5 +68,15 @@ export async function POST(
     )
   }
 
+  // Fire-and-forget: create an Authentik enrollment invitation and email it.
+  // Don't await — email delivery must not block or delay the submission response.
+  const nameQuestion = scroll.questions.find(q => /preferred name|full name/i.test(q.text))
+  const applicantName = nameQuestion ? String(body.answers[nameQuestion.id] ?? "").trim() : ""
+  fetch("http://account-api-account-api-1:5001/api/public/enroll", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: body.email, name: applicantName }),
+  }).catch(err => console.error("enroll email failed:", err))
+
   return NextResponse.json({ submission })
 }

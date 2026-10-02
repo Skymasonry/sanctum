@@ -34,7 +34,7 @@ export default async function JoinFormPage() {
             ← Back to invitation letter
           </Link>
         </div>
-        <JoinScrollForm scroll={{ ...scroll, contentBlocks: [], headerImageUrl: null }} currentUser={user.username} />
+        <JoinScrollForm scroll={{ ...scroll, contentBlocks: scroll.contentBlocks.filter(b => b.type === "agreement"), headerImageUrl: null }} currentUser={user.username} />
       </ChamberScroll>
     </div>
   )

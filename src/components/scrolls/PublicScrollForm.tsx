@@ -67,14 +67,8 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
       <div className="rounded-lg bg-success/10 px-4 py-6 text-sm text-success">
         <p className="font-medium">Your application is in.</p>
         <p className="mt-1">
-          Once your Sanctum account is set up, you&apos;ll be automatically added to
-          The Brotherhood and From Sky To Stone. Someone will be in touch soon.
-        </p>
-        <p className="mt-2 text-xs text-faint">
-          Already have an account?{" "}
-          <a href="/join" className="underline text-guild">
-            Log in and complete your application here.
-          </a>
+          Check your email — we&apos;ve sent you a link to create your Sanctum account.
+          Once you&apos;re set up you&apos;ll be automatically added to the community spaces.
         </p>
       </div>
     )
