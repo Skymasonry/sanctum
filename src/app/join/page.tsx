@@ -30,8 +30,8 @@ export default async function JoinPage() {
           </div>
         )}
 
-        {scroll.contentBlocks.length > 0 && (
-          <ContentBlocksView blocks={scroll.contentBlocks} />
+        {scroll.contentBlocks.some(b => b.type !== "agreement") && (
+          <ContentBlocksView blocks={scroll.contentBlocks.filter(b => b.type !== "agreement")} />
         )}
 
         <div className="mt-10 flex flex-col gap-3 border-t border-gray-dark pt-8 sm:flex-row">

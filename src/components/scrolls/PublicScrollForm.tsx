@@ -83,14 +83,10 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         </div>
       )}
 
-      {scroll.contentBlocks.length > 0 ? (
-        <ContentBlocksView blocks={scroll.contentBlocks} />
-      ) : (
-        scroll.description && (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
-            {scroll.description}
-          </p>
-        )
+      {scroll.description && scroll.contentBlocks.length === 0 && (
+        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-light">
+          {scroll.description}
+        </p>
       )}
 
       {!emailQuestion && (
@@ -109,6 +105,11 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
       <div className="flex flex-col gap-3">
         {scroll.questions.map((q, i) => (
           <div key={q.id}>
+            {/agree/i.test(q.text) && scroll.contentBlocks.length > 0 && (
+              <div className="mb-4">
+                <ContentBlocksView blocks={scroll.contentBlocks} />
+              </div>
+            )}
             <label className="mb-1.5 block text-sm text-white">
               <span className="mr-2 text-faint">{i + 1}.</span>
               {q.text}
