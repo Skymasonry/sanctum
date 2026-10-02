@@ -34,6 +34,7 @@ export async function POST(
     email?: string
     answers?: Record<string, unknown>
     website?: string
+    password?: string
   }
 
   if (body.website) {
@@ -68,15 +69,36 @@ export async function POST(
     )
   }
 
-  // Fire-and-forget: create an Authentik enrollment invitation and email it.
-  // Don't await — email delivery must not block or delay the submission response.
   const nameQuestion = scroll.questions.find(q => /preferred name|full name/i.test(q.text))
   const applicantName = nameQuestion ? String(body.answers[nameQuestion.id] ?? "").trim() : ""
-  fetch("http://account-api-account-api-1:5001/api/public/enroll", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: body.email, name: applicantName }),
-  }).catch(err => console.error("enroll email failed:", err))
+
+  if (body.password) {
+    // Create Authentik account immediately — awaited so the client knows if it succeeded.
+    try {
+      const registerRes = await fetch("http://account-api-account-api-1:5001/api/public/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: body.email, name: applicantName, password: body.password }),
+      })
+      const registerData = (await registerRes.json().catch(() => ({}))) as { error?: string }
+      if (!registerRes.ok) {
+        return NextResponse.json(
+          { error: registerData.error || "Failed to create account" },
+          { status: 400 },
+        )
+      }
+    } catch (err) {
+      console.error("register failed:", err)
+      return NextResponse.json({ error: "Account creation unavailable, please try again" }, { status: 503 })
+    }
+  } else {
+    // No password — fall back to enrollment invitation email.
+    fetch("http://account-api-account-api-1:5001/api/public/enroll", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: body.email, name: applicantName }),
+    }).catch(err => console.error("enroll email failed:", err))
+  }
 
   return NextResponse.json({ submission })
 }

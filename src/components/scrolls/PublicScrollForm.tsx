@@ -20,6 +20,8 @@ interface PublicScrollFormProps {
 export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [manualEmail, setManualEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [website, setWebsite] = useState("") // honeypot
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +35,18 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
     setError(null)
     if (!email) {
       setError("An email address is required.")
+      return
+    }
+    if (!password) {
+      setError("Please choose a password.")
+      return
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.")
+      return
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.")
       return
     }
     const missing = scroll.questions.some(q => {
@@ -49,7 +63,7 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         const res = await fetch(`/api/public/scrolls/${scroll.id}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, answers, website }),
+          body: JSON.stringify({ email, answers, website, password }),
         })
         if (!res.ok) {
           const err = (await res.json().catch(() => null)) as { error?: string } | null
@@ -65,10 +79,10 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
   if (done) {
     return (
       <div className="rounded-lg bg-success/10 px-4 py-6 text-sm text-success">
-        <p className="font-medium">Your application is in.</p>
+        <p className="font-medium">Your application is in and your account is ready.</p>
         <p className="mt-1">
-          Check your email — we&apos;ve sent you a link to create your Sanctum account.
-          Once you&apos;re set up you&apos;ll be automatically added to the community spaces.
+          You can now log in to Sanctum with your email and the password you just set.
+          You&apos;ll be automatically added to the community spaces on your first login.
         </p>
       </div>
     )
@@ -123,6 +137,33 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
             />
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-gray-dark pt-6">
+        <div>
+          <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
+            Create a password <span className="text-danger">*</span>
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete="new-password"
+            className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
+            Confirm password <span className="text-danger">*</span>
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
+          />
+        </div>
       </div>
 
       {/* Honeypot — hidden from real applicants via CSS, not display:none
