@@ -36,6 +36,86 @@ async function syncGuildInNextcloud(
   }
 }
 
+export type SpaceType = "chat" | "calendar" | "folder"
+
+export interface ProvisionSpaceResult {
+  talkRoom?: string
+  calendarUri?: string
+  folderId?: number
+  folderName?: string
+}
+
+/**
+ * Pull a value out of skymasonsnav's response by trying a few plausible
+ * key names/shapes. The PHP app predates the native Postgres layer and
+ * its response shape isn't documented anywhere in this repo, so this
+ * stays defensive rather than assuming one exact contract.
+ */
+function extractSpaceResult(type: SpaceType, raw: unknown): ProvisionSpaceResult {
+  const obj = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+  const nested = (key: string): Record<string, unknown> =>
+    (obj[key] && typeof obj[key] === "object" ? (obj[key] as Record<string, unknown>) : {})
+
+  // Confirmed actual shape (from server logs): { success, space: {...} }.
+  // The other lookups are kept as fallbacks in case that ever changes.
+  const space = nested("space")
+
+  if (type === "chat") {
+    const token = space.talkRoom ?? obj.talkRoom ?? obj.token ?? obj.roomToken ?? nested("room").token
+    return typeof token === "string" && token ? { talkRoom: token } : {}
+  }
+  if (type === "calendar") {
+    const uri = space.calendarUri ?? obj.calendarUri ?? obj.uri ?? nested("calendar").uri
+    return typeof uri === "string" && uri ? { calendarUri: uri } : {}
+  }
+  const folder = nested("folder")
+  const id = space.folderId ?? obj.folderId ?? folder.id
+  const name = space.folderName ?? obj.folderName ?? folder.name
+  return {
+    ...(typeof id === "number" ? { folderId: id } : {}),
+    ...(typeof name === "string" && name ? { folderName: name } : {}),
+  }
+}
+
+/**
+ * Provision (or re-fetch) a chamber's underlying Nextcloud resource via
+ * skymasonsnav, then persist whatever comes back onto the guild row.
+ *
+ * Previously the API route only proxied skymasonsnav's response to the
+ * client without saving it — the resource would (maybe) get created in
+ * Nextcloud, but Postgres never learned its id, so the chamber looked
+ * "unprovisioned" forever after refresh. This is now the single place
+ * that both calls skymasonsnav and writes the result back.
+ */
+export async function provisionSpace(
+  guildId: string,
+  type: SpaceType,
+  authHeaders: Record<string, string>,
+): Promise<ProvisionSpaceResult> {
+  const raw = await postToNextcloud(
+    `/apps/skymasonsnav/api/orders/${guildId}/spaces`,
+    { type },
+    { headers: authHeaders },
+  )
+  const result = extractSpaceResult(type, raw)
+  if (Object.keys(result).length === 0) {
+    console.error(`provisionSpace(${guildId}, ${type}): couldn't find a usable field in response`, raw)
+    return result
+  }
+
+  const sets: string[] = []
+  const params: unknown[] = []
+  let n = 1
+  if (result.talkRoom !== undefined) { sets.push(`talk_room = $${n++}`); params.push(result.talkRoom) }
+  if (result.calendarUri !== undefined) { sets.push(`calendar_uri = $${n++}`); params.push(result.calendarUri) }
+  if (result.folderId !== undefined) { sets.push(`folder_id = $${n++}`); params.push(result.folderId) }
+  if (result.folderName !== undefined) { sets.push(`folder_name = $${n++}`); params.push(result.folderName) }
+  params.push(guildId)
+  await db.query(`UPDATE guilds SET ${sets.join(", ")} WHERE id = $${n}`, params)
+
+  return result
+}
+
 export interface CreateGuildInput {
   name: string
   description?: string
@@ -48,6 +128,8 @@ export interface CreateGuildInput {
   chambers?: ChamberId[]
   applicationForm?: { agreements: Array<{ id: number; text: string }> }
   inviteMembers?: string[]
+  /** Optional at creation — named "other masons," not required to seed a guild. */
+  leadershipCircle?: string[]
 }
 
 /**
@@ -114,6 +196,19 @@ export async function createGuild(
         [id, JSON.stringify(input.applicationForm.agreements ?? [])],
       )
     }
+    // The seeder starts as a steward too — otherwise a brand-new guild
+    // would launch with nobody able to manage it until someone edits
+    // the DB directly. They (or any steward) can add/remove from there.
+    await db.query(
+      `INSERT INTO guild_stewards (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [id, seederUid],
+    )
+    for (const uid of input.leadershipCircle ?? []) {
+      await db.query(
+        `INSERT INTO guild_leadership_circle (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [id, uid],
+      )
+    }
     await db.query("COMMIT")
   } catch (err) {
     await db.query("ROLLBACK")
@@ -121,6 +216,24 @@ export async function createGuild(
   }
 
   await syncGuildInNextcloud(id, authHeaders)
+
+  // Auto-populate chat + calendar so a fresh guild isn't a wall of
+  // "unprovisioned" chambers. Best-effort: a Nextcloud hiccup here
+  // shouldn't fail guild creation — the seeder can still provision
+  // manually from the chamber if this doesn't land.
+  const autoProvision: Array<[ChamberId, SpaceType]> = [
+    ["pulse", "chat"],
+    ["rites", "calendar"],
+  ]
+  for (const [chamber, spaceType] of autoProvision) {
+    if (!chambers.includes(chamber)) continue
+    try {
+      await provisionSpace(id, spaceType, authHeaders)
+    } catch (err) {
+      console.error(`auto-provision ${spaceType} for ${id} failed:`, err)
+    }
+  }
+
   return id
 }
 
@@ -257,6 +370,8 @@ export interface UpdateGuildInfoInput {
   icon?: string
   color?: string
   admission?: "open" | "closed" | "mandatory"
+  evolutionaryPurpose?: string
+  patternIntegrity?: string
 }
 
 /**
@@ -274,6 +389,8 @@ export async function updateGuildInfo(
   if (patch.icon !== undefined) { sets.push(`icon = $${n++}`); params.push(patch.icon) }
   if (patch.color !== undefined) { sets.push(`color = $${n++}`); params.push(patch.color) }
   if (patch.admission !== undefined) { sets.push(`admission = $${n++}`); params.push(patch.admission) }
+  if (patch.evolutionaryPurpose !== undefined) { sets.push(`evolutionary_purpose = $${n++}`); params.push(patch.evolutionaryPurpose) }
+  if (patch.patternIntegrity !== undefined) { sets.push(`pattern_integrity = $${n++}`); params.push(patch.patternIntegrity) }
   if (sets.length === 0) return false
   params.push(guildId)
   const res = await db.query(
@@ -295,6 +412,48 @@ export async function updateGuildChambers(
   const res = await db.query(
     `UPDATE guilds SET chambers = $2::text[] WHERE id = $1`,
     [guildId, clean],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+/**
+ * Add a steward — idempotent, any number allowed. Unlike seederUid
+ * (single, set at creation), stewardship is a plain many-to-many table
+ * so it can be granted/revoked freely by whoever currently manages the
+ * guild (seeder or an existing steward — enforced by the caller).
+ */
+export async function addSteward(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `INSERT INTO guild_stewards (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+export async function removeSteward(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `DELETE FROM guild_stewards WHERE guild_id = $1 AND lower(user_id) = lower($2)`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+/**
+ * Leadership Circle add/remove — unlike stewards, only a guild manager
+ * (seeder/steward) can call these; the circle itself doesn't self-govern.
+ */
+export async function addLeadershipCircleMember(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `INSERT INTO guild_leadership_circle (guild_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [guildId, userId],
+  )
+  return (res.rowCount ?? 0) > 0
+}
+
+export async function removeLeadershipCircleMember(guildId: string, userId: string): Promise<boolean> {
+  const res = await db.query(
+    `DELETE FROM guild_leadership_circle WHERE guild_id = $1 AND lower(user_id) = lower($2)`,
+    [guildId, userId],
   )
   return (res.rowCount ?? 0) > 0
 }

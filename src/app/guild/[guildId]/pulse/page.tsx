@@ -5,6 +5,7 @@ import { ChatInput } from "@/components/pulse/ChatInput"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
 import { getMessages } from "@/lib/talk"
+import { isGuildManager } from "@/types/guild"
 import { notFound } from "next/navigation"
 
 interface PulsePageProps {
@@ -22,7 +23,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
 
   if (!guild.resources.talkRoom) {
     return (
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
         <ChamberHeader
           backHref={`/guild/${guildId}`}
           icon={<MessageCircle className="h-10 w-10 text-guild" />}
@@ -34,7 +35,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
           spaceType="chat"
           chamberLabel="chat room"
           bodyLine="Chat is optional per guild. The seeder can open one now."
-          isSeeder={user?.username === guild.seederUid}
+          isSeeder={isGuildManager(guild, user?.username)}
         />
       </div>
     )
@@ -44,7 +45,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
   const messages = await getMessages(token, 50)
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<MessageCircle className="h-10 w-10 text-guild" />}
@@ -52,7 +53,7 @@ export default async function PulsePage({ params }: PulsePageProps) {
         subtitle={`Whispers of ${guild.name}`}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-gray-dark bg-black">
+      <div className="glass-light flex min-h-0 flex-1 flex-col rounded-[var(--card-radius)]">
         <MessageList messages={messages} currentUser={user?.username} token={token} />
         <ChatInput guildId={guildId} token={token} members={guild.members} />
       </div>

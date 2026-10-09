@@ -30,6 +30,7 @@
     "react-dom": "19.2.3",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.4.0",
+    "web-push": "^3.6.7",
     "yjs": "^13.6.31"
   },
   "devDependencies": {
@@ -38,6 +39,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

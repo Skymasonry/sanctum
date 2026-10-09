@@ -3,6 +3,7 @@ import { RitesView } from "@/components/rites/RitesView"
 import { getGuild } from "@/lib/guilds"
 import { getUser } from "@/lib/auth"
 import { getEvents } from "@/lib/calendar"
+import { isGuildManager } from "@/types/guild"
 import { notFound } from "next/navigation"
 import { Calendar } from "lucide-react"
 
@@ -23,7 +24,7 @@ export default async function RitesPage({ params }: RitesPageProps) {
 
   if (!calendarUri) {
     return (
-      <div className="flex h-full flex-col p-6 lg:p-8">
+      <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
         <ChamberHeader
           backHref={`/guild/${guildId}`}
           icon={<Calendar className="h-10 w-10 text-guild" />}
@@ -35,7 +36,7 @@ export default async function RitesPage({ params }: RitesPageProps) {
           spaceType="calendar"
           chamberLabel="calendar"
           bodyLine="Calendar is optional per guild. The seeder can open one now."
-          isSeeder={user?.username === guild.seederUid}
+          isSeeder={isGuildManager(guild, user?.username)}
         />
       </div>
     )
@@ -44,7 +45,7 @@ export default async function RitesPage({ params }: RitesPageProps) {
   const events = await getEvents(calendarUri)
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<Calendar className="h-10 w-10 text-guild" />}

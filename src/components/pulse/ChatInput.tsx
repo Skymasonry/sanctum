@@ -195,7 +195,7 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
   const busy = isPending || isUploading
 
   return (
-    <div className="relative border-t border-gray-dark p-4">
+    <div className="relative border-t p-4" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
       <input ref={videoInputRef} type="file" className="hidden" onChange={handleFileChange} />
 
@@ -314,7 +314,10 @@ export function ChatInput({ guildId, token, members = [] }: ChatInputProps) {
           onKeyDown={handleKeyDown}
           placeholder="Speak into the void..."
           disabled={busy}
-          className="flex-1 rounded-lg border border-gray-dark bg-black-light px-4 py-2 text-white placeholder:text-gray transition-colors focus:border-guild focus:outline-none disabled:opacity-50"
+          className="flex-1 rounded-lg border px-4 py-2 text-white placeholder:text-gray transition-colors focus:outline-none disabled:opacity-50"
+          style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)' }}
+          onFocus={e => (e.currentTarget.style.borderColor = `rgb(var(--guild-color))`)}
+          onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)')}
         />
 
         <button type="submit" disabled={busy || (!message.trim() && !stagedFile)}

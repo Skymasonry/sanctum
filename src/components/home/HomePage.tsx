@@ -2,15 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import {
-  Calendar, Shield, Loader2, Search, Sparkles, ChevronDown, ChevronUp, ChevronRight
-} from "lucide-react"
+import { Calendar, Loader2, MessageSquare, ChevronRight, Video, Users } from "lucide-react"
 import type { Guild } from "@/types/guild"
 import type { User } from "@/lib/auth"
-import type { TalkRoom } from "@/lib/talk"
-import { MyGuildsSection } from "./MyGuildsSection"
+import type { TalkMessage, TalkRoom } from "@/lib/talk"
 import { CreateGuildModal } from "./CreateGuildModal"
-import { DiscoverSection } from "./DiscoverSection"
 
 interface GuildCalendar {
   guildId: string
@@ -29,6 +25,7 @@ interface UpcomingEvent {
   guildName: string
   guildColor: string
   guildIcon: string
+  links?: Array<{ type: string; label: string; url: string }>
 }
 
 interface HomePageProps {
@@ -38,17 +35,28 @@ interface HomePageProps {
   guildCalendars: GuildCalendar[]
 }
 
-export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePageProps) {
+const CHAMBER_HREF = (guildId: string) => `https://meet.talitamoss.info/${guildId}`
+
+export function HomePage({ user, allGuilds: _allGuilds, userGuilds, guildCalendars }: HomePageProps) {
   const [events, setEvents] = useState<UpcomingEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
-  const [showAllEvents, setShowAllEvents] = useState(false)
-  const [unreadByGuildId, setUnreadByGuildId] = useState<Record<string, number>>({})
+  const [openEventKey, setOpenEventKey] = useState<string | null>(null)
   const [showCreateGuild, setShowCreateGuild] = useState(false)
-  const [search, setSearch] = useState("")
-  const [tab, setTab] = useState<"my" | "discover">("my")
 
-  const username = user.username?.toLowerCase() || ""
+  const chatGuilds = userGuilds.filter((g) => g.resources.talkRoom)
+  const [selectedChatId, setSelectedChatId] = useState<string>("")
+  const [chatMessages, setChatMessages] = useState<Record<string, TalkMessage[]>>({})
+  const [chatLoading, setChatLoading] = useState<string | null>(null)
+  const [unreadByGuildId, setUnreadByGuildId] = useState<Record<string, number>>({})
 
+  // Set default selected chat
+  useEffect(() => {
+    if (!selectedChatId && chatGuilds.length > 0) {
+      setSelectedChatId(chatGuilds[0].id)
+    }
+  }, [chatGuilds])
+
+  // Load events
   useEffect(() => {
     async function loadEvents() {
       setLoadingEvents(true)
@@ -61,14 +69,14 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
         guildCalendars.map(async (gc) => {
           const res = await fetch(`/api/calendar/${gc.calendarUri}/events?from=${from}&to=${to}`)
           if (!res.ok) return []
-          const data = await res.json()
-          return (Array.isArray(data) ? data : []).map((e: any) => ({
-            ...e,
+          const data = (await res.json()) as unknown[]
+          return (Array.isArray(data) ? data : []).map((e) => ({
+            ...(e as object),
             guildId: gc.guildId,
             guildName: gc.guildName,
             guildColor: gc.guildColor,
             guildIcon: gc.guildIcon,
-          }))
+          })) as UpcomingEvent[]
         })
       )
 
@@ -76,286 +84,395 @@ export function HomePage({ user, allGuilds, userGuilds, guildCalendars }: HomePa
       for (const r of results) {
         if (r.status === "fulfilled") allEvents.push(...r.value)
       }
-
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
       setEvents(allEvents)
       setLoadingEvents(false)
     }
 
-    if (guildCalendars.length > 0) {
-      loadEvents()
-    } else {
-      setLoadingEvents(false)
-    }
+    if (guildCalendars.length > 0) loadEvents()
+    else setLoadingEvents(false)
   }, [guildCalendars])
 
+  // Load unread counts
   useEffect(() => {
+    if (chatGuilds.length === 0) return
     const tokenToGuildId: Record<string, string> = {}
-    for (const guild of userGuilds) {
-      if (guild.resources.talkRoom) {
-        tokenToGuildId[guild.resources.talkRoom] = guild.id
-      }
+    for (const guild of chatGuilds) {
+      if (guild.resources.talkRoom) tokenToGuildId[guild.resources.talkRoom] = guild.id
     }
-
-    if (Object.keys(tokenToGuildId).length === 0) return
-
     fetch("/api/talk/rooms")
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
       .then((rooms: TalkRoom[]) => {
-        const map: Record<string, number> = {}
+        const unread: Record<string, number> = {}
         for (const room of rooms) {
           const guildId = tokenToGuildId[room.token]
-          if (guildId && room.unreadMessages > 0) {
-            map[guildId] = room.unreadMessages
-          }
+          if (guildId && room.unreadMessages > 0) unread[guildId] = room.unreadMessages
         }
-        setUnreadByGuildId(map)
+        setUnreadByGuildId(unread)
       })
       .catch(() => {})
   }, [userGuilds])
 
-  const otherGuilds = allGuilds.filter(
-    (g) => !g.members.some((m) => m.toLowerCase() === username) && g.admission !== "mandatory"
-  )
+  // Load chat preview messages when tab changes
+  useEffect(() => {
+    if (!selectedChatId) return
+    if (chatMessages[selectedChatId] !== undefined) return
+    const guild = chatGuilds.find((g) => g.id === selectedChatId)
+    if (!guild?.resources.talkRoom) return
+
+    setChatLoading(selectedChatId)
+    fetch(`/api/talk/${guild.resources.talkRoom}/messages?limit=4`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((msgs: TalkMessage[]) => {
+        setChatMessages((prev) => ({ ...prev, [selectedChatId]: Array.isArray(msgs) ? msgs.slice(-4) : [] }))
+      })
+      .catch(() => {
+        setChatMessages((prev) => ({ ...prev, [selectedChatId]: [] }))
+      })
+      .finally(() => setChatLoading(null))
+  }, [selectedChatId])
+
+  const selectedGuild = chatGuilds.find((g) => g.id === selectedChatId)
+  const selectedMessages = chatMessages[selectedChatId] ?? []
+  const greeting = getGreeting()
+  const firstName = user.name?.split(" ")[0] || user.username
 
   return (
-    <div className="atmosphere flex h-full flex-col overflow-y-auto">
-      {/* Hero welcome */}
-      <div className="relative border-b border-gray-dark/50 px-6 pb-8 pt-8 lg:px-8">
-        <div className="relative z-10">
-          <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-gray">
-            Per aspera ad astra
-          </p>
-          <h1 className="font-display text-3xl font-medium tracking-wide text-gold">
-            Welcome, {user.name || user.username}
-          </h1>
-          <p className="mt-2 text-sm text-gray-light">The Sanctum awaits your counsel</p>
-        </div>
-        {/* Subtle gold gradient wash */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-gold/[0.03] to-transparent" />
-      </div>
-
-      <div className="flex-1 space-y-0 px-6 lg:px-8">
-        {/* Upcoming Rites */}
-        <section className="py-8">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
-              <Calendar className="h-4 w-4 text-gold" />
-            </div>
-            <div>
-              <h2 className="font-display text-lg font-medium tracking-wide text-white">
-                Upcoming Rites
-              </h2>
-              <p className="text-xs uppercase tracking-widest text-gray">Across all your guilds</p>
-            </div>
+    <div className="flex h-full gap-3">
+      {/* Main glass panel */}
+      <div
+        className="glass flex flex-1 flex-col overflow-hidden"
+        style={{ borderRadius: 'var(--panel-radius)' }}
+      >
+        <div className="scrollbar-none flex-1 overflow-y-auto px-8 pb-8 pt-7">
+          {/* Welcome */}
+          <div className="mb-7">
+            <p
+              className="mb-1 font-display text-[9px] font-semibold uppercase tracking-[0.24em]"
+              style={{ color: 'rgba(201,162,39,0.5)' }}
+            >
+              Per aspera ad astra
+            </p>
+            <h1
+              className="mb-1 font-display text-[26px] font-normal tracking-[0.05em]"
+              style={{ color: 'rgba(201,162,39,0.85)' }}
+            >
+              The Hearth
+            </h1>
+            <p className="text-base font-light" style={{ color: 'rgba(255,255,255,0.45)' }} suppressHydrationWarning>
+              {greeting}, {firstName}.
+            </p>
           </div>
-          {loadingEvents ? (
-            <div className="flex items-center gap-2 py-6 text-sm text-gray">
-              <Loader2 className="h-4 w-4 animate-spin" /> Consulting the stars...
-            </div>
-          ) : events.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-dark/70 py-8 text-center">
-              <Calendar className="mx-auto mb-2 h-6 w-6 text-gray-dark" />
-              <p className="text-sm italic text-gray">No rites foretold in the coming days</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <NextEventCard event={events[0]} />
-              {events.length > 1 && (
-                <button
-                  onClick={() => setShowAllEvents((v) => !v)}
-                  className="flex items-center gap-1.5 text-xs text-gray transition-colors hover:text-white"
-                >
-                  {showAllEvents ? (
-                    <><ChevronUp className="h-3.5 w-3.5" /> Hide</>
+
+          {/* Hairline */}
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+          {/* The Chat */}
+          {chatGuilds.length > 0 && (
+            <section className="mb-5">
+              <div
+                className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                <MessageSquare className="h-3 w-3" />
+                The Chat
+              </div>
+
+              {/* Guild tabs */}
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {chatGuilds.map((guild) => {
+                  const unread = unreadByGuildId[guild.id] ?? 0
+                  const isActive = selectedChatId === guild.id
+                  return (
+                    <button
+                      key={guild.id}
+                      onClick={() => setSelectedChatId(guild.id)}
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-all"
+                      style={
+                        isActive
+                          ? {
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'rgba(255,255,255,0.9)',
+                            }
+                          : {
+                              color: 'rgba(255,255,255,0.35)',
+                              border: '1px solid transparent',
+                            }
+                      }
+                    >
+                      {guild.name}
+                      {unread > 0 && (
+                        <span
+                          style={{
+                            background: 'rgba(201,162,39,0.85)',
+                            color: '#0d0a04',
+                            borderRadius: '10px',
+                            padding: '1px 5px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Message preview panel */}
+              {selectedGuild && (
+                <div className="glass-light overflow-hidden rounded-[14px]">
+                  {chatLoading === selectedChatId ? (
+                    <div className="flex items-center gap-2 px-4 py-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                    </div>
+                  ) : selectedMessages.length === 0 ? (
+                    <div className="px-4 py-5 text-[13px] italic" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      No messages yet
+                    </div>
                   ) : (
-                    <><ChevronDown className="h-3.5 w-3.5" /> {events.length - 1} more upcoming</>
+                    selectedMessages.map((msg, i) => (
+                      <MessageRow
+                        key={msg.id}
+                        msg={msg}
+                        color={selectedGuild.color}
+                        isLast={i === selectedMessages.length - 1}
+                      />
+                    ))
                   )}
-                </button>
-              )}
-              {showAllEvents && (
-                <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                  {events.slice(1).map((event) => (
-                    <EventCard key={`${event.guildId}-${event.uid}`} event={event} />
-                  ))}
+                  <Link
+                    href={`/guild/${selectedChatId}/pulse`}
+                    className="flex w-full items-center justify-center border-t py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-white/03"
+                    style={{
+                      borderColor: 'rgba(255,255,255,0.05)',
+                      color: 'rgba(201,162,39,0.6)',
+                    }}
+                  >
+                    Open full chat →
+                  </Link>
                 </div>
               )}
-            </div>
+            </section>
           )}
-        </section>
 
-        {/* Divider */}
-        <div className="glow-line relative h-px" />
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
-        {/* Guilds */}
-        <section className="py-8">
-          <div className="mb-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
-                <Shield className="h-4 w-4 text-gold" />
+          {/* My Guilds */}
+          <section>
+            <div className="mb-2.5 flex items-center justify-between">
+              <div
+                className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                <Users className="h-3 w-3" />
+                My Guilds
               </div>
-              <div>
-                <h2 className="font-display text-base font-medium tracking-wide text-white">
-                  The Guilds
-                </h2>
-                <p className="text-xs uppercase tracking-widest text-gray">Brotherhoods of the order</p>
-              </div>
+              <button
+                onClick={() => setShowCreateGuild(true)}
+                className="text-[11px] font-medium uppercase tracking-[0.08em] transition-colors hover:text-white/60"
+                style={{ color: 'rgba(255,255,255,0.25)' }}
+              >
+                + Seed
+              </button>
             </div>
-            <button
-              onClick={() => setShowCreateGuild(true)}
-              className="group inline-flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/5 px-3.5 py-2 text-xs font-medium text-gold transition-all hover:border-gold/60 hover:bg-gold/10"
-            >
-              <Sparkles className="h-3.5 w-3.5 transition-transform group-hover:rotate-12" />
-              Seed Guild
-            </button>
-          </div>
 
-          {/* Tabs */}
-          <div className="mb-4 flex items-center gap-4 border-b border-gray-dark/50">
-            <button
-              onClick={() => setTab("my")}
-              className={`relative pb-3 text-xs font-medium tracking-wider transition-colors ${
-                tab === "my" ? "text-gold" : "text-gray hover:text-white"
-              }`}
-            >
-              MY GUILDS
-              <span className="ml-1.5 text-[10px] text-gray">({userGuilds.length})</span>
-              {tab === "my" && (
-                <span className="absolute bottom-0 left-0 right-0 h-px bg-gold" />
-              )}
-            </button>
-            <button
-              onClick={() => setTab("discover")}
-              className={`relative pb-3 text-xs font-medium tracking-wider transition-colors ${
-                tab === "discover" ? "text-gold" : "text-gray hover:text-white"
-              }`}
-            >
-              DISCOVER
-              <span className="ml-1.5 text-[10px] text-gray">({otherGuilds.length})</span>
-              {tab === "discover" && (
-                <span className="absolute bottom-0 left-0 right-0 h-px bg-gold" />
-              )}
-            </button>
-            {/* Search aligned right */}
-            <div className="ml-auto pb-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="w-36 rounded border border-gray-dark/50 bg-transparent py-1 pl-7 pr-2 text-[11px] text-white placeholder:text-gray focus:border-gold/50 focus:outline-none"
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-[10px]">
+              {userGuilds.map((guild) => (
+                <Link
+                  key={guild.id}
+                  href={`/guild/${guild.id}`}
+                  className="group glass-light block rounded-[14px] p-[18px_16px] transition-all hover:bg-white/07 hover:border-white/12"
+                >
+                  <div
+                    className="mb-2.5 flex h-[38px] w-[38px] items-center justify-center text-base leading-none"
+                    style={{
+                      borderRadius: '10px',
+                      backgroundColor: `${guild.color}1e`,
+                    }}
+                  >
+                    {guild.icon?.startsWith("data:") ? (
+                      <img src={guild.icon} alt="" className="h-5 w-5 object-contain" />
+                    ) : (guild.icon || "⬡")}
+                  </div>
+                  <p
+                    className="mb-0.5 font-display text-[13px] font-normal tracking-[0.02em]"
+                    style={{ color: 'rgba(255,255,255,0.85)' }}
+                  >
+                    {guild.name}
+                  </p>
+                  <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {guild.memberCount} {guild.memberCount === 1 ? "member" : "members"}
+                  </p>
+                </Link>
+              ))}
             </div>
-          </div>
-
-          {/* Tab content */}
-          {tab === "my" ? (
-            <MyGuildsSection guilds={userGuilds} username={username} search={search} unreadByGuildId={unreadByGuildId} />
-          ) : (
-            <DiscoverSection guilds={otherGuilds} username={username} search={search} />
-          )}
-        </section>
+          </section>
+        </div>
       </div>
 
-      {/* Create Guild Modal */}
-      {showCreateGuild && (
-        <CreateGuildModal onClose={() => setShowCreateGuild(false)} />
-      )}
+      {/* Right sidebar glass panel */}
+      <div
+        className="glass flex w-[280px] shrink-0 flex-col overflow-hidden"
+        style={{ borderRadius: 'var(--panel-radius)' }}
+      >
+        <div className="scrollbar-none flex-1 overflow-y-auto px-5 py-[22px]">
+          {/* Upcoming events accordion */}
+          <div className="mb-6">
+            <div
+              className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+            >
+              <Calendar className="h-3 w-3" />
+              Upcoming
+            </div>
+
+            {loadingEvents ? (
+              <div className="flex items-center gap-2 py-4 text-[13px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+              </div>
+            ) : events.length === 0 ? (
+              <p className="py-3 text-[13px] italic" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                No rites foretold
+              </p>
+            ) : (
+              <div>
+                {events.slice(0, 8).map((event) => {
+                  const key = `${event.guildId}-${event.uid}`
+                  return (
+                    <EventAccordionRow
+                      key={key}
+                      event={event}
+                      isOpen={openEventKey === key}
+                      onToggle={() => setOpenEventKey(openEventKey === key ? null : key)}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Hairline */}
+          <div className="mb-5 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+          {/* Live Chambers */}
+          <div>
+            <div
+              className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+            >
+              <Video className="h-3 w-3" />
+              Live Chambers
+            </div>
+            {userGuilds.map((guild) => (
+              <a
+                key={guild.id}
+                href={CHAMBER_HREF(guild.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 py-2.5 last:border-0 transition-opacity hover:opacity-70"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <div
+                  className="flex h-7 w-7 shrink-0 items-center justify-center text-sm leading-none"
+                  style={{
+                    borderRadius: '7px',
+                    backgroundColor: `${guild.color}1a`,
+                  }}
+                >
+                  {guild.icon?.startsWith("data:") ? (
+                    <img src={guild.icon} alt="" className="h-4 w-4 object-contain" />
+                  ) : (guild.icon || "⬡")}
+                </div>
+                <span className="flex-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {guild.name}
+                </span>
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: 'rgba(255,255,255,0.2)' }}
+                >
+                  Join
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {showCreateGuild && <CreateGuildModal onClose={() => setShowCreateGuild(false)} />}
     </div>
   )
 }
 
-function useCountdown(target: Date) {
-  const [now, setNow] = useState(() => new Date())
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  const diff = target.getTime() - now.getTime()
-  if (diff <= 0) return null
-
-  const minutes = Math.floor(diff / 60_000)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-  const remHours = hours % 24
-  const remMinutes = minutes % 60
-
-  if (days > 0) return `${days}d ${remHours}h`
-  if (hours > 0) return `${hours}h ${remMinutes}m`
-  return `${remMinutes}m`
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return "Good morning"
+  if (h < 17) return "Good afternoon"
+  return "Good evening"
 }
 
-function NextEventCard({ event }: { event: UpcomingEvent }) {
-  const date = new Date(event.start)
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const isTomorrow = date.toDateString() === tomorrow.toDateString()
+function formatAgo(timestamp: number): string {
+  const diff = Math.floor(Date.now() / 1000) - timestamp
+  if (diff < 60) return "just now"
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
 
-  const dayLabel = isToday
-    ? "Today"
-    : isTomorrow
-    ? "Tomorrow"
-    : date.toLocaleDateString("en-AU", { weekday: "short" })
+function initials(name: string): string {
+  return name
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
+}
 
-  const dateNum = date.toLocaleDateString("en-AU", { day: "numeric", month: "short" })
-  const timeLabel = date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })
-  const guildColor = event.guildColor || "#c9a227"
-
+function MessageRow({ msg, color, isLast }: { msg: TalkMessage; color: string; isLast: boolean }) {
   return (
-    <Link
-      href={`/guild/${event.guildId}/rites`}
-      className="group flex items-center gap-4 rounded-lg border border-gray-dark bg-black-light/50 px-5 py-4 transition-all hover:border-gray hover:bg-black-light"
+    <div
+      className="flex gap-2.5 transition-colors hover:bg-white/03"
+      style={{
+        padding: '13px 16px',
+        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+      }}
     >
-      {/* Date column */}
-      <div className="flex min-w-[52px] flex-col items-center text-center">
-        <span className={`text-[10px] font-medium uppercase tracking-widest ${isToday ? "text-gold" : "text-gray"}`}>
-          {dayLabel}
-        </span>
-        <span className={`font-display text-xl font-medium leading-tight ${isToday ? "text-gold" : "text-white"}`}>
-          {date.getDate()}
-        </span>
-        <span className="text-[10px] text-gray">{dateNum.split(" ")[1]}</span>
+      <div
+        className="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+        style={{ backgroundColor: `${color}73`, color: 'rgba(255,255,255,0.8)' }}
+      >
+        {initials(msg.actorDisplayName || msg.actorId)}
       </div>
-
-      {/* Divider */}
-      <div className="h-10 w-px shrink-0 bg-gray-dark" />
-
-      {/* Event info */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-white group-hover:text-gold">
-          {event.title}
-        </p>
-        <div className="mt-0.5 flex items-center gap-1.5">
-          <span className="text-[11px] text-gray">{timeLabel}</span>
-          <span className="text-[11px] text-gray">·</span>
-          <span className="text-[11px] font-medium" style={{ color: guildColor }}>
-            {event.guildName}
+        <div className="mb-0.5 flex items-baseline gap-2">
+          <span className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            {msg.actorDisplayName || msg.actorId}
+          </span>
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            {formatAgo(msg.timestamp)}
           </span>
         </div>
+        <p
+          className="truncate text-[14px]"
+          style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}
+        >
+          {msg.message}
+        </p>
       </div>
-
-      {/* Guild icon */}
-      <div className="shrink-0 text-2xl" style={{ color: guildColor }}>
-        {event.guildIcon?.startsWith("data:") ? (
-          <img src={event.guildIcon} alt="" className="h-7 w-7 object-contain" />
-        ) : (
-          event.guildIcon || "⬡"
-        )}
-      </div>
-
-      <ChevronRight className="h-4 w-4 shrink-0 text-gray transition-transform group-hover:translate-x-0.5" />
-    </Link>
+    </div>
   )
 }
 
-function EventCard({ event }: { event: UpcomingEvent }) {
+function EventAccordionRow({
+  event,
+  isOpen,
+  onToggle,
+}: {
+  event: UpcomingEvent
+  isOpen: boolean
+  onToggle: () => void
+}) {
   const date = new Date(event.start)
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
@@ -370,30 +487,61 @@ function EventCard({ event }: { event: UpcomingEvent }) {
     : date.toLocaleDateString("en-AU", { weekday: "short", day: "numeric" })
 
   const timeLabel = date.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit", hour12: true })
-
   const guildColor = event.guildColor || "#c9a227"
 
   return (
-    <Link
-      href={`/guild/${event.guildId}/rites`}
-      className="group flex shrink-0 flex-col items-center rounded-lg border border-gray-dark bg-black-light/50 px-4 py-4 transition-all hover:border-gray hover:bg-black-light"
-    >
-      <div
-        className="mb-2.5 text-3xl"
-        style={{ color: guildColor }}
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }} className="last:border-0">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center gap-2.5 py-2.5 text-left transition-opacity hover:opacity-80"
       >
-        {event.guildIcon?.startsWith("data:") ? (
-          <img src={event.guildIcon} alt="" className="h-8 w-8 object-contain" />
-        ) : (
-          event.guildIcon || "\u2B21"
-        )}
-      </div>
-      <span className={`text-xs font-medium ${isToday ? "text-gold" : "text-white"}`}>
-        {dayLabel}
-      </span>
-      <span className="text-[11px] text-gray">
-        {timeLabel}
-      </span>
-    </Link>
+        <ChevronRight
+          className="h-3 w-3 shrink-0 transition-transform"
+          style={{
+            color: 'rgba(255,255,255,0.2)',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            transitionDuration: '0.18s',
+          }}
+        />
+        <span className="flex-1 text-[14px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+          {event.title}
+        </span>
+        <span
+          className="shrink-0 whitespace-nowrap text-[11px] font-medium"
+          style={{ color: isToday ? "#c9a227b3" : `${guildColor}b3` }}
+        >
+          {dayLabel}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="pb-3 pl-[22px]">
+          <p className="mb-1.5 text-[13px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            {event.guildName}
+          </p>
+          <div className="mb-2 flex gap-3 text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            <span>{timeLabel}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/guild/${event.guildId}/rites`}
+              className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gold/60 hover:text-gold/90"
+            >
+              View in Rites →
+            </Link>
+            {event.links?.find(l => l.type === "meeting") && (
+              <a
+                href={event.links.find(l => l.type === "meeting")!.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-80"
+                style={{ color: `${guildColor}cc` }}
+              >
+                Join Chamber ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

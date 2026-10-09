@@ -179,7 +179,7 @@ export function QuestBoard({ guildId, guildName, initialBoard }: QuestBoardProps
   }
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <div className="flex h-full flex-col overflow-hidden p-6 lg:p-8">
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<Target className="h-10 w-10 text-guild" />}

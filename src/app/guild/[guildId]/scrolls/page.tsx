@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { FileText } from "lucide-react"
 
-import { ChamberHeader } from "@/components/shared"
+import { ChamberHeader, ChamberScroll } from "@/components/shared"
 import { ScrollsView } from "@/components/scrolls/ScrollsView"
 import { getGuild } from "@/lib/guilds"
 import { listScrollsForGuild } from "@/lib/scrolls"
@@ -18,7 +18,7 @@ export default async function ScrollsPage({ params }: ScrollsPageProps) {
   const scrolls = await listScrollsForGuild(guildId)
 
   return (
-    <div className="flex h-full flex-col p-6 lg:p-8">
+    <ChamberScroll>
       <ChamberHeader
         backHref={`/guild/${guildId}`}
         icon={<FileText className="h-10 w-10 text-guild" />}
@@ -29,6 +29,6 @@ export default async function ScrollsPage({ params }: ScrollsPageProps) {
         guildId={guildId}
         initialScrolls={scrolls}
       />
-    </div>
+    </ChamberScroll>
   )
 }
