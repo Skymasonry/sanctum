@@ -309,3 +309,42 @@ export async function listSubmissions(scrollId: string): Promise<ScrollSubmissio
     answers: (typeof r.answers === "object" && r.answers !== null ? r.answers : {}) as Record<string, unknown>,
   }))
 }
+
+export async function getSubmission(
+  submissionId: string,
+): Promise<(ScrollSubmission & { guildId: string }) | null> {
+  const res = await db.query<{
+    id: string
+    scroll_id: string
+    submitted_by: string | null
+    submitted_email: string | null
+    submitted_at: Date
+    answers: unknown
+    guild_id: string
+  }>(
+    `SELECT sub.*, s.guild_id
+     FROM scroll_submissions sub
+     JOIN scrolls s ON s.id = sub.scroll_id
+     WHERE sub.id = $1`,
+    [submissionId],
+  )
+  if (!res.rows[0]) return null
+  const r = res.rows[0]
+  return {
+    id: r.id,
+    scrollId: r.scroll_id,
+    submittedBy: r.submitted_by,
+    submittedEmail: r.submitted_email,
+    submittedAt: r.submitted_at.toISOString(),
+    answers: (typeof r.answers === "object" && r.answers !== null ? r.answers : {}) as Record<
+      string,
+      unknown
+    >,
+    guildId: r.guild_id,
+  }
+}
+
+export async function deleteSubmission(submissionId: string): Promise<boolean> {
+  const res = await db.query(`DELETE FROM scroll_submissions WHERE id = $1`, [submissionId])
+  return (res.rowCount ?? 0) > 0
+}

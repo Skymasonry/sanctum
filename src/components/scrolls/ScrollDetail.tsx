@@ -36,6 +36,14 @@ export function ScrollDetail({ scroll, submissions, isSeeder, canReviewSubmissio
   const [copied, setCopied] = useState(false)
   const [editingContent, setEditingContent] = useState(false)
   const [showSubmissions, setShowSubmissions] = useState(false)
+  const [localSubmissions, setLocalSubmissions] = useState(submissions)
+
+  const handleDeleteSubmission = (id: string) => {
+    start(async () => {
+      const res = await fetch(`/api/submissions/${id}`, { method: "DELETE" })
+      if (res.ok) setLocalSubmissions(prev => prev.filter(s => s.id !== id))
+    })
+  }
 
   // Seeder-only question builder state
   const [newQ, setNewQ] = useState("")
@@ -247,21 +255,32 @@ export function ScrollDetail({ scroll, submissions, isSeeder, canReviewSubmissio
             className="flex w-full items-center justify-between text-left"
           >
             <span className="font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
-              {submissions.length} submission{submissions.length === 1 ? "" : "s"}
+              {localSubmissions.length} submission{localSubmissions.length === 1 ? "" : "s"}
             </span>
             <span className="text-xs text-guild">{showSubmissions ? "Hide" : "View"}</span>
           </button>
 
           {showSubmissions && (
             <div className="mt-4 flex flex-col gap-3">
-              {submissions.length === 0 ? (
+              {localSubmissions.length === 0 ? (
                 <p className="text-sm italic text-faint">No submissions yet.</p>
               ) : (
-                submissions.map(s => (
+                localSubmissions.map(s => (
                   <div key={s.id} className="rounded-lg border border-gray-dark bg-black-deep/40 p-3">
                     <div className="mb-2 flex items-center justify-between text-xs text-faint">
                       <span className="text-white">{s.submittedBy ?? s.submittedEmail ?? "Anonymous"}</span>
-                      <span>{new Date(s.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{new Date(s.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSubmission(s.id)}
+                          disabled={pending}
+                          className="rounded p-0.5 text-faint transition-colors hover:text-danger disabled:opacity-40"
+                          title="Delete submission"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                     <dl className="flex flex-col gap-2">
                       {scroll.questions.map(q => {
