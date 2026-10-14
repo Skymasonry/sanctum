@@ -5,10 +5,13 @@ services:
     command: node server.js
     ports:
       - "3001:3000"
+    # Production builds in its own checkout (~/sanctum-prod, tracking main,
+    # built by deploy-sanctum.sh). Neo deploys rebuild ./.next in this
+    # directory, so mounting it here put neo's code under production.
     volumes:
-      - ./.next/standalone:/app
-      - ./.next/static:/app/.next/static
-      - ./public:/app/public
+      - ../sanctum-prod/.next/standalone:/app
+      - ../sanctum-prod/.next/static:/app/.next/static
+      - ../sanctum-prod/public:/app/public
     env_file:
       - .env
     environment:
