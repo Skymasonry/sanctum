@@ -43,6 +43,8 @@ export interface ScrollSubmission {
   submittedEmail: string | null
   submittedAt: string
   answers: Record<string, unknown>
+  /** Attending as a guest — no account, no guild memberships. */
+  isGuest: boolean
 }
 
 interface ScrollMetaRow {
@@ -269,17 +271,19 @@ export async function deleteQuestion(questionId: string): Promise<boolean> {
  * Record a submission. `submittedBy` is an Authentik username for
  * normal in-app fills; it's null for a public (unauthenticated)
  * submission, which is identified by `submittedEmail` instead.
+ * `isGuest` marks a public submission from someone attending as a guest.
  */
 export async function submitScroll(
   scrollId: string,
   submittedBy: string | null,
   submittedEmail: string | null,
   answers: Record<string, unknown>,
+  isGuest = false,
 ): Promise<ScrollSubmission> {
   const res = await db.query<{ id: string; submitted_at: Date }>(
-    `INSERT INTO scroll_submissions (scroll_id, submitted_by, submitted_email, answers)
-     VALUES ($1, $2, $3, $4::jsonb) RETURNING id, submitted_at`,
-    [scrollId, submittedBy, submittedEmail, JSON.stringify(answers)],
+    `INSERT INTO scroll_submissions (scroll_id, submitted_by, submitted_email, answers, is_guest)
+     VALUES ($1, $2, $3, $4::jsonb, $5) RETURNING id, submitted_at`,
+    [scrollId, submittedBy, submittedEmail, JSON.stringify(answers), isGuest],
   )
   return {
     id: res.rows[0].id,
@@ -288,15 +292,16 @@ export async function submitScroll(
     submittedEmail,
     submittedAt: res.rows[0].submitted_at.toISOString(),
     answers,
+    isGuest,
   }
 }
 
 export async function listSubmissions(scrollId: string): Promise<ScrollSubmission[]> {
   const res = await db.query<{
     id: string; scroll_id: string; submitted_by: string | null; submitted_email: string | null
-    submitted_at: Date; answers: unknown
+    submitted_at: Date; answers: unknown; is_guest: boolean
   }>(
-    `SELECT id, scroll_id, submitted_by, submitted_email, submitted_at, answers
+    `SELECT id, scroll_id, submitted_by, submitted_email, submitted_at, answers, is_guest
      FROM scroll_submissions WHERE scroll_id = $1 ORDER BY submitted_at DESC`,
     [scrollId],
   )
@@ -307,6 +312,7 @@ export async function listSubmissions(scrollId: string): Promise<ScrollSubmissio
     submittedEmail: r.submitted_email,
     submittedAt: r.submitted_at.toISOString(),
     answers: (typeof r.answers === "object" && r.answers !== null ? r.answers : {}) as Record<string, unknown>,
+    isGuest: r.is_guest,
   }))
 }
 
@@ -320,6 +326,7 @@ export async function getSubmission(
     submitted_email: string | null
     submitted_at: Date
     answers: unknown
+    is_guest: boolean
     guild_id: string
   }>(
     `SELECT sub.*, s.guild_id
@@ -340,6 +347,7 @@ export async function getSubmission(
       string,
       unknown
     >,
+    isGuest: r.is_guest,
     guildId: r.guild_id,
   }
 }

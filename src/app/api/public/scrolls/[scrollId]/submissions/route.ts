@@ -15,6 +15,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * still need to go through the normal invite flow to get an account;
  * the seeder reviewing submissions is the reconciliation point.
  *
+ * `guest: true` is someone attending From Sky To Stone as a guest: the
+ * answers are recorded (flagged as a guest submission) and nothing else
+ * happens — no account, no pending guild joins, no enrollment email.
+ *
  * `website` is an anti-bot honeypot: a real applicant never fills it
  * in (it's not rendered visibly), so a non-empty value means a bot
  * filled every field it could find. We accept the request either way
@@ -35,6 +39,7 @@ export async function POST(
     answers?: Record<string, unknown>
     website?: string
     password?: string
+    guest?: boolean
   }
 
   if (body.website) {
@@ -55,6 +60,11 @@ export async function POST(
   })
   if (missing) {
     return NextResponse.json({ error: "Please answer all required questions" }, { status: 400 })
+  }
+
+  if (body.guest) {
+    const submission = await submitScroll(scrollId, null, body.email, body.answers, true)
+    return NextResponse.json({ submission })
   }
 
   const submission = await submitScroll(scrollId, null, body.email, body.answers)
