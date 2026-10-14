@@ -9,7 +9,8 @@ const FSTS_GUILD_ID = "from-sky-to-stone"
 
 /**
  * /join — public landing page. Shows the full application letter and
- * offers two paths: log in (existing members) or sign up (new members).
+ * offers two paths: log in (existing members) or sign up (new members),
+ * plus a quieter third for guests attending without becoming members.
  * No auth required — Caddy passes this through unauthenticated.
  */
 export default async function JoinPage() {
@@ -48,6 +49,12 @@ export default async function JoinPage() {
             Sign up and fill out form
           </Link>
         </div>
+        <p className="mt-4 text-center text-sm text-faint">
+          Coming as a guest?{" "}
+          <Link href="/join/apply?as=guest" className="text-guild transition-colors hover:text-guild/80">
+            Fill out the form as a guest
+          </Link>
+        </p>
       </ChamberScroll>
     </div>
   )

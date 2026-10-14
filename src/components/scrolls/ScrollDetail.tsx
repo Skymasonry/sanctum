@@ -268,7 +268,14 @@ export function ScrollDetail({ scroll, submissions, isSeeder, canReviewSubmissio
                 localSubmissions.map(s => (
                   <div key={s.id} className="rounded-lg border border-gray-dark bg-black-deep/40 p-3">
                     <div className="mb-2 flex items-center justify-between text-xs text-faint">
-                      <span className="text-white">{s.submittedBy ?? s.submittedEmail ?? "Anonymous"}</span>
+                      <span className="flex items-center gap-2 text-white">
+                        {s.submittedBy ?? s.submittedEmail ?? "Anonymous"}
+                        {s.isGuest && (
+                          <span className="rounded-full border border-guild/40 px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] text-guild uppercase">
+                            Guest
+                          </span>
+                        )}
+                      </span>
                       <div className="flex items-center gap-2">
                         <span>{new Date(s.submittedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
                         <button

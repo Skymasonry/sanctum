@@ -8,6 +8,8 @@ import { QuestionInput } from "./QuestionInput"
 
 interface PublicScrollFormProps {
   scroll: Scroll
+  /** Attending as a guest: no password, no account, no guild joins. */
+  guest?: boolean
 }
 
 /**
@@ -16,8 +18,11 @@ interface PublicScrollFormProps {
  * (there's no account to add), so submitting just records the answers
  * against the email they enter; a seeder reviewing submissions is the
  * follow-up point for getting them an invite.
+ *
+ * In `guest` mode the password fields are dropped and the submission is
+ * recorded as a guest's — no account is created.
  */
-export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
+export function PublicScrollForm({ scroll, guest = false }: PublicScrollFormProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [manualEmail, setManualEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -37,17 +42,19 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
       setError("An email address is required.")
       return
     }
-    if (!password) {
-      setError("Please choose a password.")
-      return
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.")
-      return
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords don't match.")
-      return
+    if (!guest) {
+      if (!password) {
+        setError("Please choose a password.")
+        return
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.")
+        return
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords don't match.")
+        return
+      }
     }
     const missing = scroll.questions.some(q => {
       if (!q.required) return false
@@ -63,7 +70,9 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         const res = await fetch(`/api/public/scrolls/${scroll.id}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, answers, website, password }),
+          body: JSON.stringify(
+            guest ? { email, answers, website, guest: true } : { email, answers, website, password },
+          ),
         })
         if (!res.ok) {
           const err = (await res.json().catch(() => null)) as { error?: string } | null
@@ -74,6 +83,17 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         setError(err instanceof Error ? err.message : "Failed to submit")
       }
     })
+  }
+
+  if (done && guest) {
+    return (
+      <div className="rounded-lg bg-success/10 px-4 py-6 text-sm text-success">
+        <p className="font-medium">Thank you, your guest registration is in.</p>
+        <p className="mt-1">
+          The stewards will be in touch at the email address you gave.
+        </p>
+      </div>
+    )
   }
 
   if (done) {
@@ -139,32 +159,34 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-dark pt-6">
-        <div>
-          <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
-            Create a password <span className="text-danger">*</span>
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete="new-password"
-            className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
-          />
+      {!guest && (
+        <div className="flex flex-col gap-3 border-t border-gray-dark pt-6">
+          <div>
+            <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
+              Create a password <span className="text-danger">*</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
+              Confirm password <span className="text-danger">*</span>
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="mb-1.5 block text-xs uppercase tracking-widest text-faint">
-            Confirm password <span className="text-danger">*</span>
-          </label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-            className="w-full rounded-lg border border-gray-dark bg-black-deep px-3 py-2.5 text-sm text-white placeholder-gray focus:border-guild focus:outline-none"
-          />
-        </div>
-      </div>
+      )}
 
       {/* Honeypot — hidden from real applicants via CSS, not display:none
           (some bots skip display:none fields specifically). */}
@@ -181,7 +203,7 @@ export function PublicScrollForm({ scroll }: PublicScrollFormProps) {
           disabled={pending}
           className="rounded-lg bg-guild px-5 py-2.5 text-sm font-medium text-black-deep transition-colors hover:bg-guild/80 disabled:opacity-50"
         >
-          {pending ? "Submitting…" : "Submit application"}
+          {pending ? "Submitting…" : guest ? "Submit guest registration" : "Submit application"}
         </button>
         {error && <span className="text-sm text-danger">{error}</span>}
       </div>
