@@ -12,10 +12,20 @@ const FSTS_GUILD_ID = "from-sky-to-stone"
  * Sanctum account yet. No auth required. Submitting records their answers
  * and stores pending guild memberships against their email; these are
  * applied automatically when their account is created.
+ *
+ * `?as=guest` is the guest path: the same questions, but no password and
+ * no account — the submission is just recorded, flagged as a guest's.
+ * It lives here rather than at its own route so it stays covered by
+ * Caddy's existing public exemption for /join/apply.
  */
-export default async function JoinApplyPage() {
-  const scroll = await getScrollByGuild(FSTS_GUILD_ID)
+export default async function JoinApplyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ as?: string }>
+}) {
+  const [scroll, { as }] = await Promise.all([getScrollByGuild(FSTS_GUILD_ID), searchParams])
   if (!scroll) notFound()
+  const guest = as === "guest"
 
   return (
     <div className="glass flex h-full flex-col overflow-hidden" style={{ borderRadius: "var(--panel-radius)" }}>
@@ -28,7 +38,12 @@ export default async function JoinApplyPage() {
             ← Back to invitation letter
           </Link>
         </div>
-        <PublicScrollForm scroll={{ ...scroll, contentBlocks: scroll.contentBlocks.filter(b => b.type === "agreement"), headerImageUrl: null }} />
+        {guest && (
+          <p className="mb-6 text-sm text-gray-light">
+            Registering as a guest. No Sanctum account is created.
+          </p>
+        )}
+        <PublicScrollForm scroll={{ ...scroll, contentBlocks: scroll.contentBlocks.filter(b => b.type === "agreement"), headerImageUrl: null }} guest={guest} />
       </ChamberScroll>
     </div>
   )
